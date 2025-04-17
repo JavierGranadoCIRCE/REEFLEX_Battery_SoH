@@ -1,57 +1,24 @@
 from comet_ml import Experiment
-import os
-import time
-import tqdm
-import pandas as pd
-from copy import deepcopy
-from typing import Dict
-
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from sklearn.metrics import confusion_matrix
-import numpy as np
-import torch
-import onnxruntime as ort
-import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import TensorDataset, DataLoader
-import scipy.io as scio
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
 from SAnD.utils.inference import Inference_SoH_Siamese, Inference_SoH_Normal, Inference_SoH_Normal_Improve, Inference_SoH_NARX
 from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, create_cycle_triplets
 import scipy.io as scio
 import glob
 import os
 import matplotlib.pyplot as plt
-import numpy as np
 import onnxruntime as ort
 import numpy as np
 import yaml
 from dataset import load_NASA
-from sklearn.preprocessing import MinMaxScaler
-
 from SAnD.core.modules import ContrastiveLoss
-
-from SAnD.core.modules import ContrastiveLoss
-
 from SAnD.core.model import SAnD, SAnD_Embedding, SiameseSAnD, SAnDImprove, NARX_Transformer
-from SAnD.utils.functions import generar_pares_aleatorios
 from SAnD.utils.trainer import NeuralNetworkClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import torch, gc
 from torch.utils.data import TensorDataset, DataLoader
-from torchinfo import summary
-######################################## Introducimos la rama de NARX
 
-
-# Real Dataset Generator
-#dataFile = 'dataset/ARC-FY/B0025'   # Modify this path
-#raw = scio.loadmat(dataFile)['B0025'][0][0][0][0]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
 mat_files = glob.glob(os.path.join(data_folder, "*.mat"))
@@ -96,11 +63,6 @@ for i in range(len(labels)):
     if len(labels[i]) > 0:  # Solo conservar si la etiqueta no está vacía
         filtered_cycles.append(cycles[i])
         filtered_labels.append(labels[i])
-# for i in range(len(labels)):
-#     if labels[i] > 0.5:  # Solo conservar si la etiqueta es mayor de 0.5
-#         filtered_cycles.append(cycles[i])
-#         filtered_labels.append(labels[i])
-
 # Sustituimos las listas originales por las filtradas
 cycles = filtered_cycles
 labels = filtered_labels
