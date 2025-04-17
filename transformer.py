@@ -71,21 +71,7 @@ print(f"Nueva cantidad de ciclos: {len(cycles)}")
 print(f"Nueva cantidad de labels: {len(labels)}")
 for lb in range(len(labels)):
     labels[lb] = labels[lb][0] / 1.856487420818157  # TODO: first (largest) capacity found, but probably not the full cp
-# calculate SOHs
-# for lb in range(len(labels)):
-#     #print(f"label {lb} de un total de {len(labels)}")
-#     if (1974 < lb < 1979) or (2006 < lb < 2027):
-#         labels[lb] = labels[lb+20][0] / 1.856487420818157  # TODO: first (largest) capacity found, but probably not the full cp
-#     else:
-#         lb =2106
-#         labels[lb] = labels[lb][0] / 1.856487420818157  # TODO: first (largest) capacity found, but probably not the full cp
-#         #print(f"⚠️ Error en lb={lb}: labels[{lb}] está vacío.")
-# # print(f"Len data: {len(data)}, Len labels: {len(labels)}")  # Comprobar si siguen coincidiendo
-#labels = labels * 20
 labels = labels * 1
-# # print(f"Len data: {len(data)}, Len labels: {len(labels)}")  # Comprobar si siguen coincidiendo
-#
-#for t0 in [0, 1.5, 3, 4.5, 6, 7.5, 9, 10.5, 12, 13.5, 15, 16.5, 18, 19.5, 21, 22.5, 24, 25.5, 27, 28.5]:
 for t0 in [0]:
     for cy in cycles:
         t0 = 0
@@ -108,13 +94,9 @@ for t0 in [0]:
             cursor -= 1
             t += 10
         data.append(cy_new)
-    #         # print(f"En iteración {t0}, tamaño actual de data: {len(data)}")
 
 print(f"Final Len data: {len(data)}, Len labels: {len(labels)}")
 
-# Data shape: (495, 401, 3)
-# Labels shape: (495)
-# data = cycles
 for i in range(len(data)):
     mm = MinMaxScaler()
     data[i] = mm.fit_transform(data[i])
@@ -135,13 +117,6 @@ for i in range(3):
 # Volvemos a convertir a tensor
 data = torch.from_numpy(data_np).float()
 #################################################### Escalado canal por canal entre -1 y 1
-
-
-
-# Escalar etiquetas
-# label_scaler = MinMaxScaler()
-# # labels = label_scaler.fit_transform(np.array(labels).reshape(-1, 1)).flatten()
-# labels = label_scaler.fit_transform(np.asarray(labels).reshape(-1, 1)).flatten()
 
 
 ##########################################################################################################
@@ -175,10 +150,10 @@ test_dataloader  = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 x_pairs, cap_inputs, y_targets = create_cycle_triplets(data, labels)
 
-###########################################################
-# Mantener solo las dos primeras variables: V (0), I (1)
+######################################################################################
+# Mantener solo las dos primeras variables: V (0), I (1) para las olimpIAdas
 #x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
-################################################################
+#######################################################################################
 x_train_narx, x_temp_narx, cap_train, cap_temp, y_train_narx, y_temp_narx = train_test_split(
     x_pairs, cap_inputs, y_targets, test_size=0.2, random_state=42, shuffle=False)
 
@@ -195,10 +170,8 @@ test_loader_narx = DataLoader(test_ds_narx, batch_size=32, shuffle=False)
 
 ##########################################################################################################
 #ejemplos de test con el ciclo historico fijo #0
-# Seleccionamos el histórico fijo: por ejemplo el ciclo 0 del train
-
-historical_cycle = x_test_narx[10][0]  # x_test_narx[i][0] es el ciclo anterior en el par (2, 400, 3)
-historical_soh = cap_test[10]         # SoH asociado al histórico fijo
+# Seleccionamos el histórico fijo para que sea igual que el current
+######################################################################################################
 
 # Creamos nuevos pares con ese histórico fijo combinado con todos los ciclos de test
 x_pairs_fixed = []
