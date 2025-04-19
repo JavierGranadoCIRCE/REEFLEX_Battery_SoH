@@ -12,7 +12,7 @@ import numpy as np
 import yaml
 from dataset import load_NASA
 from SAnD.core.modules import ContrastiveLoss
-from SAnD.core.model import SAnD, SAnD_Embedding, SiameseSAnD, SAnDImprove, NARX_Transformer
+from SAnD.core.model import SAnD, SAnD_Embedding, SiameseSAnD, SAnDImprove, NARX_Transformer, NARX_Transformer_2var
 from SAnD.utils.trainer import NeuralNetworkClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -152,7 +152,7 @@ x_pairs, cap_inputs, y_targets = create_cycle_triplets(data, labels)
 
 ######################################################################################
 # Mantener solo las dos primeras variables: V (0), I (1) para las olimpIAdas
-#x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
+x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
 #######################################################################################
 x_train_narx, x_temp_narx, cap_train, cap_temp, y_train_narx, y_temp_narx = train_test_split(
     x_pairs, cap_inputs, y_targets, test_size=0.2, random_state=42, shuffle=False)
@@ -486,55 +486,14 @@ if train == True:
     #         epochs=80
     # )
 
-    # training network NARX
+    # # training network NARX
     clf.fit_NARX_Transformer(x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
                 {"train_narx": fixed_train_loader,
             "val_narx": fixed_val_loader,
             "test_narx": fixed_test_loader},
             epochs=2000
     )
-
-
-
-    # # # #
-    # # # #
-    # # # #
-    # # # # #Inference SoH Siames ###############################
-    # # # # #inference_model = Inference_SoH_Siamese("save_params/trained_model_siamese.pth", input_features=3, seq_len=400, n_heads=32, factor=32, n_class=1, n_layers=4)
-    # # # # #soh_predictions = inference_model.predict(test_loader)
-    # # # # #Inference SoH ###############################
-    # # # #
-    # # # # #Inference SoH Normal ###############################
-    # # # # # inference_model = Inference_SoH_Normal("save_params/trained_model_normal.pth", input_features=3, seq_len=400, n_heads=32, factor=32, n_class=1, n_layers=4)
-    # # # # # soh_predictions = inference_model.predict(test_loader)
-    # # # # #Inference SoH ###############################
-    # # # #
-    # # # # # evaluating
-    # # # # # clf.restore_from_file("save_params/trained model.pth", "cuda")
-    # # # # # clf.evaluate(test_loader)
-    # # # #
-    # # # # save
-    #clf.save_to_file_normal("save_params/")
-    #clf.save_to_file_normal_improve("save_params/")
-    #clf.save_to_file_siamese("save_params/")
     clf.save_to_file_Narx("save_params/")
-    # #
-    # # #
-    # # #
-    # # #
-    # # # # Conversión a ONNX
-    # # # # Cargar el modelo entrenado
-
-
-
-    class WrappedModel(nn.Module):
-        def __init__(self, model):
-            super(WrappedModel, self).__init__()
-            self.model = model
-            self.sigmoid = nn.Sigmoid()  # Agregar sigmoide
-
-        def forward(self, x):
-            return self.sigmoid(self.model(x))  # Aplicar sigmoide después del modelo
 
     class WrappedModel_NARX(nn.Module):
         def __init__(self, base_model):
@@ -544,57 +503,19 @@ if train == True:
         def forward(self, x_pair, cap_input):
             return self.base_model(x_pair, cap_input)
 
-
-    #modelo = SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers)
-    #modelo = SAnDImprove(in_feature, seq_len, n_heads, factor, num_class, num_layers)
-    modelo = NARX_Transformer(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
-    #modelo = SAnD_Embedding(in_feature, seq_len, n_heads, factor, num_class, num_layers)
-    # # # # Verificar los atributos de modelo_siamese
-    # print(modelo_siamese)
-    # # # # # Verificar los atributos de modelo_normal
-    # print(modelo)
-    # # # # # Copiar pesos de la parte compartida del modelo siamesa al modelo normal
-    # # # # Transferir pesos del modelo siamesa al modelo normal
-    # modelo.encoder.load_state_dict(modelo_siamese.sand.encoder.state_dict(), strict=False)  # Transferir encoder
-    # modelo.dense_interpolation.load_state_dict(modelo_siamese.sand.dense_interpolation.state_dict(), strict=False)  # Transferir dense_interpolation
-    # # #
-    # # #
-    # # # print("Pesos transferidos correctamente.")
-    # # # print(modelo)
-    # # #
-    # # # # 2. Cargar el diccionario de estado correctamente
-
-    # # checkpoint = torch.load("save_params/trained_model_normal_old.pth", map_location="cpu")
-    # # print(checkpoint.keys())  # Ver qué hay dentro
-    # # if "hyperparameters" in checkpoint:  # Si guardaste los hiperparámetros
-    # #     print(checkpoint["hyperparameters"])
-    #checkpoint = torch.load("save_params/trained_model_normal_improve.pth", map_location="cpu")
-    #checkpoint = torch.load("save_params/trained_model_normal.pth", map_location="cpu")
+    modelo = NARX_Transformer_2var(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
     checkpoint = torch.load("save_params/trained_model_narx.pth", map_location="cpu")
     modelo.load_state_dict(checkpoint["model_state_dict"], strict=False)
     modelo.eval()
-    #wrapped_model = WrappedModel(modelo)  # Envolver modelo con sigmoide
     wrapped_model = WrappedModel_NARX(modelo)  # Envolver modelo con sigmoide
-    # # #
-    # # # # # Crear un dummy input (ajusta el tamaño según tu entrada real)
-    # # # #
-    #input_shape = (400, 3)
-    #dummy_input = torch.randn(1, *input_shape)
-
     # Dummy inputs (para NARX)
-    dummy_x_pair = torch.randn(1, 2, 400, 3)
+    dummy_x_pair = torch.randn(1, 2, 400, 2)
     dummy_cap_input = torch.randn(1, 1)
-
-    # # # #
-    # # # # # Exportar a ONNX
-    #torch.onnx.export(modelo, dummy_input, "save_params/trained_model_normal.onnx", opset_version=13)
-    #torch.onnx.export(wrapped_model, dummy_input, "save_params/trained_model_normal_improve.onnx", opset_version=13)
-    # # torch.onnx.export(modelo, dummy_input, "save_params/trained_model_normal_improve_old.onnx", opset_version=13)
 
     torch.onnx.export(
         wrapped_model,
         (dummy_x_pair, dummy_cap_input),  # ahora son dos entradas
-        "save_params/trained_model_narx.onnx",
+        "save_params/trained_model_narx_2var.onnx",
         input_names=["x_pair", "cap_input"],
         output_names=["soh_pred"],
         opset_version=17,
@@ -620,84 +541,55 @@ def cargar_modelo(modo="onnx", modelo = None):
     if modo == "onnx":
         # session = ort.InferenceSession("save_params/trained_model_normal.onnx")
         session = ort.InferenceSession(modelo)
-        input_name = session.get_inputs()[0].name
-        return session, input_name
-    # elif modo == "pth":
-    #     #inference_model = Inference_SoH_Normal_Improve("save_params/trained_model_normal_improve.pth", input_features=3, seq_len=400, n_heads=64, factor=32, n_class=1, n_layers=12)
-    #     inference_model = Inference_SoH_Normal("save_params/trained_model_normal.pth", input_features=3, seq_len=400, n_heads=32, factor=32, n_class=1, n_layers=4)
-    #     return inference_model
+        input_names = [inp.name for inp in session.get_inputs()]
+        print(f"[INFO] Entradas del modelo ONNX: {input_names}")
+        return session, input_names
     else:
         raise ValueError("Modo no reconocido. Usa 'onnx' o 'pth'.")
 
-def realizar_inferencia(x_test, y_test, test_loader, modo="onnx", modelo=None):
+def realizar_inferencia(x_test, cap_input_test, y_test, test_loader, modo="onnx", modelo=None):
     """Realiza la inferencia usando ONNX o PyTorch y calcula métricas."""
 
 
     if modo == "onnx":
-        predicciones = []
-        etiquetas_reales = []
-        mae_total, mse_sum, mape_total = 0, 0, 0
-        modelo, input_name = cargar_modelo(modo, modelo)
+        pred_values = []
+        real_values = []
+        mae_total, mse_total, mape_total, smape_total = 0, 0, 0, 0
+        session, input_names = cargar_modelo(modo, modelo)
         for idx in range(len(x_test)):
             x_sample = x_test[idx].numpy().astype(np.float32)  # Convertir tensor a numpy
             x_sample = np.expand_dims(x_sample, axis=0)  # Añadir batch dimension
+            cap_sample = cap_input_test[i].numpy().astype(np.float32)[np.newaxis]  # (1, 1)
 
             # Inferencia con ONNX
-            output = modelo.run(None, {input_name: x_sample})[0]
-            # # Inferencia con PyTorch
-            # else:
-            #     with torch.no_grad():
-            #         x_tensor = torch.tensor(x_sample)
-            #         output = inference_model.predict(x_tensor)
+            output = session.run(None, {
+                input_names[0]: x_sample,
+                input_names[1]: cap_sample
+            })[0]
+            pred = output[0][0]  # (1,)
+            real = y_test[i].item()
 
             # Guardar predicción y etiqueta real
-            pred = output[0]  # Asumimos salida en la primera posición
-            real = y_test[idx].item()
-            predicciones.append(pred)
-            etiquetas_reales.append(real)
+            pred_values.append(pred)
+            real_values.append(real)
 
             # Cálculo de errores
             mae_total += np.abs(pred - real)
-            mse_sum += (pred - real) ** 2
+            mse_total += (pred - real) ** 2
             if real != 0:
                 mape_total += np.abs((pred - real) / real)
-
+            smape_total += np.abs(pred - real) / ((np.abs(pred) + np.abs(real)) / 2)
             # Mostrar resultado parcial
-            print(f"Ejemplo {idx + 1}/{len(x_test)} -> Predicción: {pred}, Etiqueta Real: {real}")
+            print(f"Ejemplo {i + 1}/{len(x_test)} -> Predicción: {pred:.4f}, Real: {real:.4f}")
 
     if modo == "pth":
         predicciones = []
         etiquetas_reales = []
         mae_total, mse_sum, mape_total, smap_total = 0, 0, 0, 0
-        # sand_model = SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers)
-        # # Cargar los pesos del modelo entrenado
-        #checkpoint = torch.load("save_params/trained_model_narx.pth", map_location=device)
-        # sand_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
-        # sand_model.to(device)
-        # sand_model.eval()
-        #
-        # with torch.no_grad():
-        #     for idx in range(len(x_test)):
-        #         x_sample = x_test[idx].clone().detach().to(device)
-        #         soh_raw = sand_model(x_sample)  # Obtener SoH
-        #         pred = torch.sigmoid(soh_raw).cpu().numpy()
-        #         real = y_test[idx].item()
-        #         predicciones.append(pred)
-        #         etiquetas_reales.append(real)
-
-        #Inference SoH Normal ###############################
-        #inference_model = Inference_SoH_Normal("save_params/trained_model_normal.pth", input_features=3, seq_len=400, n_heads=16, factor=1, n_class=1, n_layers=8)
-        #inference_model = Inference_SoH_Normal_Improve(modelo, input_features=3, seq_len=400, n_heads=1, factor=1, n_class=1, n_layers=8)
         inference_model = Inference_SoH_NARX(modelo, input_features=3, seq_len=400, n_heads=num_attention, num_cycles = num_cycles, num_preds=num_preds)
-        # inference_model = Inference_SoH_Siamese(modelo, input_features=3, seq_len=400, n_heads=32, factor=32, n_class=1, n_layers=4)
         soh_predictions = inference_model.predict(fixed_train_loader)
-        # soh_predictions = inference_model.predict(fixed_test_loader)
         #Inference SoH ###############################
 
-
-
-
-        # real = soh_predictions[1]
         real_values = []
         pred_values = []
         x_test = x_train_narx
@@ -741,9 +633,6 @@ def realizar_inferencia(x_test, y_test, test_loader, modo="onnx", modelo=None):
     smape = smap_total / len(x_test)
     # Calcula el MAPE promedio
     mape = mape_total / len(x_test)
-    #  Multiplica por 100 para tener el resultado en porcentaje
-    # mape_total*= 100
-    #mape = (mape_total / len(x_test)) * 100
 
     print("\nMétricas finales:")
     print(f"MAE: {mae}")
@@ -752,73 +641,52 @@ def realizar_inferencia(x_test, y_test, test_loader, modo="onnx", modelo=None):
     print(f"SMAPE: {smape}")
 
 
-def realizar_inferencia_narx(x_test, y_test, cap_test, modo="onnx", modelo=None):
+def realizar_inferencia_narx(x_test, cap_input_test, y_test,  modo="onnx", modelo=None):
     """Realiza la inferencia usando ONNX o PyTorch y calcula métricas."""
 
-
+    mae_total,  mse_sum = 0, 0
+    smape_total, mape_total = 0, 0
+    real_values = []
+    pred_values = []
     if modo == "onnx":
-        predicciones = []
-        etiquetas_reales = []
-        mae_total, mse_sum, mape_total = 0, 0, 0
-        modelo, input_name = cargar_modelo(modo, modelo)
-        for idx in range(len(x_test_narx)):
-            x_sample = x_test_narx[idx].numpy().astype(np.float32)  # Convertir tensor a numpy
-            x_sample = np.expand_dims(x_sample, axis=0)  # Añadir batch dimension
+        pred_values = []
+        real_values = []
+        mae_total, mse_total, mape_total, smape_total = 0, 0, 0, 0
+        session, input_names = cargar_modelo(modo, modelo)
+        for i in range(len(x_test)):
+            x_sample = x_test[i].numpy().astype(np.float32)[np.newaxis, ...]       # (1, 2, 400, 3)
+            cap_sample = cap_input_test[i].numpy().astype(np.float32)[np.newaxis]  # (1, 1)
 
             # Inferencia con ONNX
-            output = modelo.run(None, {input_name: x_sample})[0]
-            # # Inferencia con PyTorch
-            # else:
-            #     with torch.no_grad():
-            #         x_tensor = torch.tensor(x_sample)
-            #         output = inference_model.predict(x_tensor)
+            output = session.run(None, {
+                input_names[0]: x_sample,
+                input_names[1]: cap_sample
+            })[0]
+            pred = output[0][0]  # (1,)
+            real = y_test[i].item()
 
             # Guardar predicción y etiqueta real
-            pred = output[0]  # Asumimos salida en la primera posición
-            real = y_test[idx].item()
-            predicciones.append(pred)
-            etiquetas_reales.append(real)
+            pred_values.append(pred)
+            real_values.append(real)
 
             # Cálculo de errores
+            mse_sum += (real - pred) ** 2
             mae_total += np.abs(pred - real)
-            mse_sum += (pred - real) ** 2
+            mse_total += (pred - real) ** 2
+
             if real != 0:
                 mape_total += np.abs((pred - real) / real)
-
+            smape_total += np.abs(pred - real) / ((np.abs(pred) + np.abs(real)) / 2)
             # Mostrar resultado parcial
-            print(f"Ejemplo {idx + 1}/{len(x_test)} -> Predicción: {pred}, Etiqueta Real: {real}")
+            print(f"Ejemplo {i + 1}/{len(x_test)} -> Predicción: {pred:.4f}, Real: {real:.4f}")
 
     if modo == "pth":
         predicciones = []
         etiquetas_reales = []
-        mae_total, mse_sum, mape_total, smap_total = 0, 0, 0, 0
-        # sand_model = SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers)
-        # # Cargar los pesos del modelo entrenado
-        #checkpoint = torch.load("save_params/trained_model_narx.pth", map_location=device)
-        # sand_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
-        # sand_model.to(device)
-        # sand_model.eval()
-        #
-        # with torch.no_grad():
-        #     for idx in range(len(x_test)):
-        #         x_sample = x_test[idx].clone().detach().to(device)
-        #         soh_raw = sand_model(x_sample)  # Obtener SoH
-        #         pred = torch.sigmoid(soh_raw).cpu().numpy()
-        #         real = y_test[idx].item()
-        #         predicciones.append(pred)
-        #         etiquetas_reales.append(real)
-
-        #Inference SoH Normal ###############################
-        # inference_model = Inference_SoH_Normal("save_params/trained_model_normal.pth", input_features=3, seq_len=400, n_heads=32, factor=32, n_class=1, n_layers=4)
-        #inference_model = Inference_SoH_Normal_Improve(modelo, input_features=3, seq_len=400, n_heads=1, factor=1, n_class=1, n_layers=8)
+        mae_total, mse_total, mape_total, smape_total = 0, 0, 0, 0
         inference_model = Inference_SoH_NARX(modelo, input_features=feature_dim1, seq_len=feature_dim2, n_heads=num_attention, num_cycles = num_cycles, num_preds=num_preds)
-        # inference_model = Inference_SoH_Siamese(modelo, input_features=3, seq_len=400, n_heads=32, factor=32, n_class=1, n_layers=4)
         soh_predictions = inference_model.predict(fixed_test_loader)
         #Inference SoH ###############################
-
-
-
-
         # real = soh_predictions[1]
         real_values = []
         pred_values = []
@@ -838,28 +706,28 @@ def realizar_inferencia_narx(x_test, y_test, cap_test, modo="onnx", modelo=None)
                 mape_total += np.abs((pred - real) / real)
             smap_sup = pred - real
             smap_inf = (np.abs(pred) + np.abs(real)) / 2
-            smap_total += np.abs(smap_sup / smap_inf)
+            smape_total += np.abs(smap_sup / smap_inf)
 
             # Mostrar resultado parcial
             print(f"Ejemplo {idx + 1}/{len(x_test)} -> Predicción: {pred}, Etiqueta Real: {real}")
 
-        # Graficar los valores reales y predichos
-        plt.figure(figsize=(10, 5))
-        plt.scatter(range(len(real_values[:])), real_values[:], label="Real", color="blue", marker="o")
-        plt.scatter(range(len(pred_values[:])), pred_values[:], label="Predicho", color="red", marker="x")
+    # Graficar los valores reales y predichos
+    plt.figure(figsize=(10, 5))
+    plt.scatter(range(len(real_values[:])), real_values[:], label="Real", color="blue", marker="o")
+    plt.scatter(range(len(pred_values[:])), pred_values[:], label="Predicho", color="red", marker="x")
 
 
-        # Etiquetas y título
-        plt.xlabel("Índice de muestra")
-        plt.ylabel("State of Health (SoH)")
-        plt.title("Comparación de SoH Real vs Predicho")
-        plt.legend()
-        plt.show()
+    # Etiquetas y título
+    plt.xlabel("Índice de muestra")
+    plt.ylabel("State of Health (SoH)")
+    plt.title("Comparación de SoH Real vs Predicho")
+    plt.legend()
+    plt.show()
     # Cálculo de métricas
     mae = mae_total / len(x_test)
     mse = mse_sum / len(x_test)
     rmse = np.sqrt(mse)
-    smape = smap_total / len(x_test)
+    smape = smape_total / len(x_test)
     # Calcula el MAPE promedio
     mape = mape_total / len(x_test)
     #  Multiplica por 100 para tener el resultado en porcentaje
@@ -875,14 +743,15 @@ def realizar_inferencia_narx(x_test, y_test, cap_test, modo="onnx", modelo=None)
 
 # 🔹 Ejemplo de uso
 if inference ==  True:
-    modo = "pth"  # Cambia a "pth" para usar el modelo original
+    modo = "onnx"  # Cambia a "pth" para usar el modelo original
 
     # model = torch.load("save_params/trained_model_narx.pt", weights_only=False)
     # # Extraer los pesos
     # state_dict = model.state_dict()
     # # Guardar solo el state_dict
     # torch.save({"model_state_dict": state_dict}, "save_params/trained_model_narx_new.pth")
-    modelo ="save_params/trained_model_narx.pth"
+    modelo ="save_params/trained_model_narx_2var.onnx"
+    #modelo ="save_params/trained_model_narx.pth"
     #realizar_inferencia(x_test, y_test, test_loader, modo, modelo)
     #realizar_inferencia_narx(x_test_narx, y_test_narx, cap_test, modo, modelo)
     realizar_inferencia_narx(x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
