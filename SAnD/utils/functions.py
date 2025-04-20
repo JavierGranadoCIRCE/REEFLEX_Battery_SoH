@@ -3,8 +3,31 @@ import numpy as np
 import random
 import numpy as np
 import pandas as pd
+import onnxruntime as ort
+import matplotlib.pyplot as plt
+import yaml
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from typing import Dict
+
+from SAnD.core.model import NARX_Transformer_2var
+from SAnD.utils.inference import Inference_SoH_NARX
+
+
+
+with open('config.yaml', 'r') as file:
+    cfg = yaml.safe_load(file)
+
+# # Access the variables
+num_cycles = cfg['NUM_CYCLES']
+num_preds = cfg['NUM_PREDS']
+feature_dim1 = cfg['FEATURE_DIM1']
+feature_dim2 = cfg['FEATURE_DIM2']
+num_attention = cfg['NUM_ATTENTION']
+EPOCHS = cfg['EPOCHS']
+LEARNING_RATE = cfg['LEARNING_RATE']
+BATCH_SIZE = cfg['BATCH_SIZE']
+
 
 def positional_encoding(n_positions: int, hidden_dim: int) -> torch.Tensor:
     def calc_angles(pos, i):
@@ -177,7 +200,149 @@ def save_example_to_csv_narx(x_pair, cap_input, y_target, example_idx, filename=
 
     print(f"Ejemplo {example_idx} guardado en {filename}")
 
+def realizar_inferencia_narx(loader, x_test, cap_input_test, y_test,  modo="onnx", modelo=None):
+    """Realiza la inferencia usando ONNX o PyTorch y calcula métricas."""
 
+    mae_total,  mse_sum = 0, 0
+    smape_total, mape_total = 0, 0
+    real_values = []
+    pred_values = []
+    if modo == "onnx":
+        pred_values = []
+        real_values = []
+        mae_total, mse_total, mape_total, smape_total = 0, 0, 0, 0
+        session, input_names = cargar_modelo(modo, modelo)
+        for i in range(len(x_test)):
+            x_sample = x_test[i].numpy().astype(np.float32)[np.newaxis, ...]       # (1, 2, 400, 3)
+            cap_sample = cap_input_test[i].numpy().astype(np.float32)[np.newaxis]  # (1, 1)
+
+            # Inferencia con ONNX
+            output = session.run(None, {
+                input_names[0]: x_sample,
+                input_names[1]: cap_sample
+            })[0]
+            pred = output[0][0]  # (1,)
+            real = y_test[i].item()
+
+            # Guardar predicción y etiqueta real
+            pred_values.append(pred)
+            real_values.append(real)
+
+            # Cálculo de errores
+            mse_sum += (real - pred) ** 2
+            mae_total += np.abs(pred - real)
+            mse_total += (pred - real) ** 2
+
+            if real != 0:
+                mape_total += np.abs((pred - real) / real)
+            smape_total += np.abs(pred - real) / ((np.abs(pred) + np.abs(real)) / 2)
+            # Mostrar resultado parcial
+            print(f"Ejemplo {i + 1}/{len(x_test)} -> Predicción: {pred:.4f}, Real: {real:.4f}")
+
+    if modo == "pth":
+        predicciones = []
+        etiquetas_reales = []
+        mae_total, mse_total, mape_total, smape_total = 0, 0, 0, 0
+        inference_model = Inference_SoH_NARX(modelo, input_features=feature_dim1, seq_len=feature_dim2, n_heads=num_attention, num_cycles = num_cycles, num_preds=num_preds)
+        soh_predictions = inference_model.predict(loader)
+        #Inference SoH ###############################
+        # real = soh_predictions[1]
+        real_values = []
+        pred_values = []
+
+        for idx in range(len(x_test)):
+            pred = soh_predictions[0][idx]
+            real = soh_predictions[1][idx]
+
+            # Guardar valores para graficar
+            real_values.append(real)
+            pred_values.append(pred)
+
+            # Cálculo de errores
+            mae_total += np.abs(real - pred)
+            mse_sum += (real - pred) ** 2
+            if real != 0:
+                mape_total += np.abs((pred - real) / real)
+            smap_sup = pred - real
+            smap_inf = (np.abs(pred) + np.abs(real)) / 2
+            smape_total += np.abs(smap_sup / smap_inf)
+
+            # Mostrar resultado parcial
+            print(f"Ejemplo {idx + 1}/{len(x_test)} -> Predicción: {pred}, Etiqueta Real: {real}")
+
+    # Graficar los valores reales y predichos
+    plt.figure(figsize=(10, 5))
+    plt.scatter(range(len(real_values[:])), real_values[:], label="Real", color="blue", marker="o")
+    plt.scatter(range(len(pred_values[:])), pred_values[:], label="Predicho", color="red", marker="x")
+
+
+    # Etiquetas y título
+    plt.xlabel("Índice de muestra")
+    plt.ylabel("State of Health (SoH)")
+    plt.title("Comparación de SoH Real vs Predicho")
+    plt.legend()
+    plt.show()
+    # Cálculo de métricas
+    mae = mae_total / len(x_test)
+    mse = mse_sum / len(x_test)
+    rmse = np.sqrt(mse)
+    smape = smape_total / len(x_test)
+    # Calcula el MAPE promedio
+    mape = mape_total / len(x_test)
+    #  Multiplica por 100 para tener el resultado en porcentaje
+    # mape_total*= 100
+    #mape = (mape_total / len(x_test)) * 100
+
+    print("\nMétricas finales:")
+    print(f"MAE: {mae}")
+    print(f"MSE: {mse}")
+    print(f"RMSE: {rmse}")
+    print(f"SMAPE: {smape}")
+
+
+def cargar_modelo(modo="onnx", modelo = None):
+    """Carga el modelo según el modo especificado."""
+    if modo == "onnx":
+        # session = ort.InferenceSession("save_params/trained_model_normal.onnx")
+        session = ort.InferenceSession(modelo)
+        input_names = [inp.name for inp in session.get_inputs()]
+        print(f"[INFO] Entradas del modelo ONNX: {input_names}")
+        return session, input_names
+    else:
+        raise ValueError("Modo no reconocido. Usa 'onnx' o 'pth'.")
+
+def export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds):
+    modelo = NARX_Transformer_2var(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
+    checkpoint = torch.load("save_params/trained_model_narx_2var.pth", map_location="cpu")
+    modelo.load_state_dict(checkpoint["model_state_dict"], strict=False)
+    modelo.eval()
+    wrapped_model = WrappedModel_NARX(modelo)  # Envolver modelo con sigmoide
+    # Dummy inputs (para NARX)
+    dummy_x_pair = torch.randn(1, 2, 400, 2)
+    dummy_cap_input = torch.randn(1, 1)
+
+    torch.onnx.export(
+        wrapped_model,
+        (dummy_x_pair, dummy_cap_input),  # ahora son dos entradas
+        "save_params/trained_model_narx_2var.onnx",
+        input_names=["x_pair", "cap_input"],
+        output_names=["soh_pred"],
+        opset_version=17,
+        dynamic_axes={
+            "x_pair": {0: "batch_size"},
+            "cap_input": {0: "batch_size"},
+            "soh_pred": {0: "batch_size"}
+        }
+    )
+    print(f"Ejemplo onnx guardado")
+
+class WrappedModel_NARX(nn.Module):
+    def __init__(self, base_model):
+        super(WrappedModel_NARX, self).__init__()
+        self.base_model = base_model
+
+    def forward(self, x_pair, cap_input):
+        return self.base_model(x_pair, cap_input)
 
 
 
