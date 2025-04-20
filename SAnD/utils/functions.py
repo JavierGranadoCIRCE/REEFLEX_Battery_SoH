@@ -345,6 +345,104 @@ class WrappedModel_NARX(nn.Module):
         return self.base_model(x_pair, cap_input)
 
 
+##########################################################################
+# PLoteo de los ciclos de carga del dataset completo de NARX
+def ploteo_NARX(ciclos):
+    variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
+    colores = ["b", "r", "g"]  # Azul, rojo y verde
+
+    # Recorrer todos los ejemplos del dataset
+    for sample_idx in range(len(ciclos)):
+        x_train, cap_inputs_fixed, y_train = ciclos[sample_idx]  # x_train: (num_cycles, 400, 3), y_train: (num_cycles,)
+
+        # Recorrer los ciclos de carga dentro de este ejemplo
+        for i in range(x_train.shape[0]):
+            plt.figure(figsize=(10, 5))
+            for j in range(3):
+                plt.plot(x_train[i, :, j], color=colores[j], label=variables[j])
+
+            soh_value = y_train.item()
+            plt.xlabel("Tiempo (puntos de muestreo)")
+            plt.ylabel("Valor")
+            plt.title(f"Ejemplo {sample_idx+1}, Ciclo {i+1} - SoH: {soh_value:.2f}%")
+            plt.legend()
+            plt.grid()
+            plt.show()
+            input("Presiona Enter para ver el siguiente ciclo...")
+            plt.close()
+##########################################################################
+
+
+
+##########################################################################
+# PLoteo de los ciclos de carga del dataset completo de NN4SOH adaptado a NARX
+def ploteo_NN4SOH_aaptado_a_NARX(ciclos):
+    variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
+    colores = ["b", "r", "g"]  # Azul, rojo y verde
+
+    # Recorrer todos los ejemplos del dataset
+    for sample_idx in range(len(ciclos)):
+        x_train, y_train = ciclos[sample_idx]  # x_train: (num_cycles, 400, 3), y_train: (num_cycles,)
+
+        # Recorrer los ciclos de carga dentro de este ejemplo
+        for i in range(x_train.shape[0]):
+            plt.figure(figsize=(10, 5))
+            for j in range(3):
+                plt.plot(x_train[i, :, j], color=colores[j], label=variables[j])
+
+            soh_value = y_train[i]
+            plt.xlabel("Tiempo (puntos de muestreo)")
+            plt.ylabel("Valor")
+            plt.title(f"Ejemplo {sample_idx+1}, Ciclo {i+1} - SoH: {soh_value:.2f}%")
+            plt.legend()
+            plt.grid()
+            plt.show()
+            input("Presiona Enter para ver el siguiente ciclo...")
+            plt.close()
+##########################################################################
+
+
+
+# ##########################################################################
+# # PLoteo de los ciclos de carga del dataset completo de NN4SOH
+#
+#
+# # Etiquetas de las variables
+def ploteo_NN4SOH(ciclos_x, ciclos_y):
+    variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
+    colores = ["b", "r", "g"]  # Azul, rojo y verde
+
+    for i in range(ciclos_x.shape[0]):  # Recorremos los ciclos de carga
+        plt.figure(figsize=(10, 5))
+
+        # Dibujar las 3 variables en distintos colores
+        for j in range(3):
+            plt.plot(ciclos_x[i, :, j], color=colores[j], label=variables[j])
+
+        soh_value = ciclos_y[i]  # Obtener el SoH del ciclo actual
+        plt.xlabel("Tiempo (puntos de muestreo)")
+        plt.ylabel("Valor")
+        plt.title(f"Ciclo de carga {i+1} - SoH: {soh_value:.2f}%")  # Agregar el SoH en el título
+        plt.legend()
+        plt.grid()
+
+
+        plt.show()
+
+        input("Presiona Enter para ver el siguiente ciclo...")  # Espera antes de mostrar el siguiente gráfico
+        plt.close()
+# # PLoteo de los coclos de carga del dataset completo
+# ##########################################################################
+
+
+##########calculo parámetros del modelo###############
+def count_parameters(model):
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total de parámetros: {total_params:,}")
+    print(f"Parámetros entrenables: {trainable_params:,}")
+##########calculo parámetros del modelo###############
+
 
 class ScheduledOptimizer:
     """

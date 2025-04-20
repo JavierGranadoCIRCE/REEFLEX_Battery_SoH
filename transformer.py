@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from SAnD.utils.inference import Inference_SoH_Siamese, Inference_SoH_Normal, Inference_SoH_Normal_Improve, Inference_SoH_NARX
 from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, create_cycle_triplets, \
-    realizar_inferencia_narx, WrappedModel_NARX, export_trained_model_to_onnx
+    realizar_inferencia_narx, WrappedModel_NARX, export_trained_model_to_onnx, ploteo_NARX, \
+    ploteo_NN4SOH_aaptado_a_NARX, ploteo_NN4SOH, count_parameters
 import scipy.io as scio
 import glob
 import os
@@ -153,7 +154,7 @@ x_pairs, cap_inputs, y_targets = create_cycle_triplets(data, labels)
 
 ######################################################################################
 # Mantener solo las dos primeras variables: V (0), I (1) para las olimpIAdas
-x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
+#x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
 #######################################################################################
 x_train_narx, x_temp_narx, cap_train, cap_temp, y_train_narx, y_temp_narx = train_test_split(
     x_pairs, cap_inputs, y_targets, test_size=0.2, random_state=42, shuffle=False)
@@ -281,96 +282,13 @@ train_loader = DataLoader(train_ds, batch_size=32, shuffle=False)
 val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
 test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
 
-
-# ##########################################################################
-# # PLoteo de los ciclos de carga del dataset completo de NARX
-#
-# variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
-# colores = ["b", "r", "g"]  # Azul, rojo y verde
-#
-# # Recorrer todos los ejemplos del dataset
-# for sample_idx in range(len(val_ds_narx)):
-#     x_train, cap_inputs_fixed, y_train = val_ds_narx[sample_idx]  # x_train: (num_cycles, 400, 3), y_train: (num_cycles,)
-#
-#     # Recorrer los ciclos de carga dentro de este ejemplo
-#     for i in range(x_train.shape[0]):
-#         plt.figure(figsize=(10, 5))
-#         for j in range(3):
-#             plt.plot(x_train[i, :, j], color=colores[j], label=variables[j])
-#
-#         soh_value = y_train.item()
-#         plt.xlabel("Tiempo (puntos de muestreo)")
-#         plt.ylabel("Valor")
-#         plt.title(f"Ejemplo {sample_idx+1}, Ciclo {i+1} - SoH: {soh_value:.2f}%")
-#         plt.legend()
-#         plt.grid()
-#         plt.show()
-#         input("Presiona Enter para ver el siguiente ciclo...")
-#         plt.close()
-# ##########################################################################
-
-
-
-# ##########################################################################
-# # PLoteo de los ciclos de carga del dataset completo de NN4SOH adaptado a NARX
-#
-# variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
-# colores = ["b", "r", "g"]  # Azul, rojo y verde
-#
-# # Recorrer todos los ejemplos del dataset
-# for sample_idx in range(len(train_dataset)):
-#     x_train, y_train = train_dataset[sample_idx]  # x_train: (num_cycles, 400, 3), y_train: (num_cycles,)
-#
-#     # Recorrer los ciclos de carga dentro de este ejemplo
-#     for i in range(x_train.shape[0]):
-#         plt.figure(figsize=(10, 5))
-#         for j in range(3):
-#             plt.plot(x_train[i, :, j], color=colores[j], label=variables[j])
-#
-#         soh_value = y_train[i]
-#         plt.xlabel("Tiempo (puntos de muestreo)")
-#         plt.ylabel("Valor")
-#         plt.title(f"Ejemplo {sample_idx+1}, Ciclo {i+1} - SoH: {soh_value:.2f}%")
-#         plt.legend()
-#         plt.grid()
-#         plt.show()
-#         input("Presiona Enter para ver el siguiente ciclo...")
-#         plt.close()
-# ##########################################################################
-
-
-
-# # ##########################################################################
-# # # PLoteo de los ciclos de carga del dataset completo de NN4SOH
-# #
-# #
-# # # Etiquetas de las variables
-# variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
-# colores = ["b", "r", "g"]  # Azul, rojo y verde
-#
-# for i in range(x_train.shape[0]):  # Recorremos los ciclos de carga
-#     plt.figure(figsize=(10, 5))
-#
-#     # Dibujar las 3 variables en distintos colores
-#     for j in range(3):
-#         plt.plot(x_train[i, :, j], color=colores[j], label=variables[j])
-#
-#     soh_value = y_train[i]  # Obtener el SoH del ciclo actual
-#     plt.xlabel("Tiempo (puntos de muestreo)")
-#     plt.ylabel("Valor")
-#     plt.title(f"Ciclo de carga {i+1} - SoH: {soh_value:.2f}%")  # Agregar el SoH en el título
-#     plt.legend()
-#     plt.grid()
-#
-#
-#     plt.show()
-#
-#     input("Presiona Enter para ver el siguiente ciclo...")  # Espera antes de mostrar el siguiente gráfico
-#     plt.close()
-# # # PLoteo de los coclos de carga del dataset completo
-# # ##########################################################################
-
-
+##########################################################################
+# PLoteo de los ciclos
+##########################################################################
+#ploteo_NARX(val_ds_narx)
+#ploteo_NN4SOH_aaptado_a_NARX(train_dataset)
+#ploteo_NN4SOH(x_train, y_train)
+##########################################################################
 
 
 in_feature = 3
@@ -424,20 +342,11 @@ clf = NeuralNetworkClassifier(
 
 
 )
-
-
-##########calculo parámetros del modelo###############
-# def count_parameters(model):
-#     total = sum(p.numel() for p in model.parameters())
-#     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-#     return total, trainable
-#
-# model = NARX_Transformer(16, 16, 16, 2, 1)
-# total_params, trainable_params = count_parameters(model)
-# print(f"Total de parámetros: {total_params:,}")
-# print(f"Parámetros entrenables: {trainable_params:,}")
-##########calculo parámetros del modelo###############
-
+####################################################
+#####cuenta el número de parámetros del modelo
+# model = NARX_Transformer_2var(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
+# count_parameters(model)
+#########################################################
 
 inference = True
 if inference == True:
@@ -447,21 +356,20 @@ elif inference == False:
     torch.cuda.empty_cache()
     gc.collect()
 
-
-#####save example to csv####################################################
+################################################################################
+##### save example to csv for running inference on Raspberry Pi ################
+################################################################################
 export_csv = False
 if export_csv == True:
     inference = False
     train = False
-
-    #save_example_to_csv(x_test, y_test, 2490, filename="save_params/ciclo_de_carga.csv")
     save_example_to_csv_narx(x_test_narx, cap_test, y_test_narx, 8, filename="save_params/ciclo_de_carga_narx_8.csv")
-#####save example to csv####################################################
+################################################################################
 
 
 
 #################################################################################################################3
-# Training
+# Training process
 ###############################################################################################################
 
 if train == True:
@@ -496,15 +404,18 @@ if train == True:
             "test_narx": fixed_test_loader},
             epochs=2000
     )
-    clf.save_to_file_Narx("save_params/")
-
 
 # ##################################################################################################
-# # # Export trained model to onnx
+# # # save pth model when training process is completed
 # #############################################################################################
+    clf.save_to_file_Narx("save_params/")
+#############################################################################################
 
+# ##################################################################################################
+# # # Export trained model to onnx after save pth model
+# #############################################################################################
     export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
-
+#############################################################################################
 
 
 # ##################################################################################################
@@ -514,17 +425,8 @@ if train == True:
 # 🔹 Ejemplo de uso
 if inference ==  True:
     modo = "onnx"  # Cambia a "pth" para usar el modelo original
-
-    # model = torch.load("save_params/trained_model_narx.pt", weights_only=False)
-    # # Extraer los pesos
-    # state_dict = model.state_dict()
-    # # Guardar solo el state_dict
-    # torch.save({"model_state_dict": state_dict}, "save_params/trained_model_narx_new.pth")
     modelo ="save_params/trained_model_narx_2var.onnx"
-    #modelo ="save_params/trained_model_narx.pth"
-    #realizar_inferencia(x_test, y_test, test_loader, modo, modelo)
-    #realizar_inferencia_narx(x_test_narx, y_test_narx, cap_test, modo, modelo)
     realizar_inferencia_narx(fixed_test_loader, x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
-    #realizar_inferencia("save_params/trained_model_normal.pth")
+
 
 
