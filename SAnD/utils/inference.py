@@ -217,7 +217,7 @@ class Inference_SoH_NARX:
         checkpoint = torch.load(model_path, map_location=device)
         print(checkpoint.keys())
 
-        self.sand_model.load_state_dict(checkpoint["model_state_dict"])
+        self.sand_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
 
         self.sand_model.to(device)
         self.sand_model.eval()

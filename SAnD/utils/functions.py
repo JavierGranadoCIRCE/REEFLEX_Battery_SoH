@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from typing import Dict
 
-from SAnD.core.model import NARX_Transformer_2var
+from SAnD.core.model import NARX_Transformer_2var, NARX_Transformer
 from SAnD.utils.inference import Inference_SoH_NARX
 
 
@@ -298,6 +298,15 @@ def realizar_inferencia_narx(loader, x_test, cap_input_test, y_test,  modo="onnx
     print(f"MSE: {mse}")
     print(f"RMSE: {rmse}")
     print(f"SMAPE: {smape}")
+
+
+def cargar_modelo_pth_finetuning(modelo, path_modelo):
+    modelo = NARX_Transformer(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
+    checkpoint = torch.load(path_modelo, map_location=torch.device('cuda'))
+    print(checkpoint.keys())  # Verifica las claves del checkpoint
+    modelo.load_state_dict(checkpoint['model_state_dict'])  # Cargar solo el modelo
+    return modelo, checkpoint
+
 
 
 def cargar_modelo(modo="onnx", modelo = None):

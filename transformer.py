@@ -4,7 +4,7 @@ import torch.optim as optim
 from SAnD.utils.inference import Inference_SoH_Siamese, Inference_SoH_Normal, Inference_SoH_Normal_Improve, Inference_SoH_NARX
 from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, create_cycle_triplets, \
     realizar_inferencia_narx, WrappedModel_NARX, export_trained_model_to_onnx, ploteo_NARX, \
-    ploteo_NN4SOH_aaptado_a_NARX, ploteo_NN4SOH, count_parameters
+    ploteo_NN4SOH_aaptado_a_NARX, ploteo_NN4SOH, count_parameters, cargar_modelo_pth_finetuning
 import scipy.io as scio
 import glob
 import os
@@ -348,11 +348,12 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = True
+inference = False
 if inference == True:
     train = False
 elif inference == False:
     train = True
+    finetuning = True
     torch.cuda.empty_cache()
     gc.collect()
 
@@ -373,49 +374,71 @@ if export_csv == True:
 ###############################################################################################################
 
 if train == True:
-    # # training network Normal
-    # clf.fit_normal(x_train, y_train, x_val, y_val, x_test, y_test,
-    #         {"train": train_loader,
-    #       "val": val_loader,
-    #       "test": test_loader},
-    #       epochs=80
-    # )
 
-    # # #training network Improve
-    # clf.fit_normal_improve(x_train, y_train, x_val, y_val, x_test, y_test,
-    #          {"train": train_loader,
-    #       "val": val_loader,
-    #       "test": test_loader},
-    #       epochs=80
-    # )
-    # # #
-    # training network Siamese
-    # clf.fit_siamese(x_train, y_train, x_val, y_val, x_test, y_test,
-    #             {"train": train_loader,
-    #         "val": val_loader,
-    #         "test": test_loader},
-    #         epochs=80
-    # )
+    if finetuning == True:
+        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer,"save_params/trained_model_narx_2var.pth")
+        modelo = modelo.to(device)
+        epoch = checkpoint['epoch']
+        optimizer_narx = optimizer = torch.optim.Adam(modelo.parameters(), lr=0.001)
+        optimizer_narx.load_state_dict(checkpoint['optimizer_state_dict'])
+        clf.fit_NARX_Transformer_finetuning(epoch, optimizer_narx, modelo, x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
+                                 {"train_narx": fixed_train_loader,
+                                  "val_narx": fixed_val_loader,
+                                  "test_narx": fixed_test_loader},
+                                 epochs=2
+                                 )
+        # ##################################################################################################
+        # # # save pth model when finetuning process is completed
+        # #############################################################################################
+        clf.save_to_file_Narx_finetuning("save_params/")
+        #############################################################################################
 
-    # # training network NARX
-    clf.fit_NARX_Transformer(x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
-                {"train_narx": fixed_train_loader,
-            "val_narx": fixed_val_loader,
-            "test_narx": fixed_test_loader},
-            epochs=2000
-    )
+    elif finetuning == False:
+        # # training network Normal
+        # clf.fit_normal(x_train, y_train, x_val, y_val, x_test, y_test,
+        #         {"train": train_loader,
+        #       "val": val_loader,
+        #       "test": test_loader},
+        #       epochs=80
+        # )
 
-# ##################################################################################################
-# # # save pth model when training process is completed
-# #############################################################################################
-    clf.save_to_file_Narx("save_params/")
-#############################################################################################
+        # # #training network Improve
+        # clf.fit_normal_improve(x_train, y_train, x_val, y_val, x_test, y_test,
+        #          {"train": train_loader,
+        #       "val": val_loader,
+        #       "test": test_loader},
+        #       epochs=80
+        # )
+        # # #
+        # training network Siamese
+        # clf.fit_siamese(x_train, y_train, x_val, y_val, x_test, y_test,
+        #             {"train": train_loader,
+        #         "val": val_loader,
+        #         "test": test_loader},
+        #         epochs=80
+        # )
 
-# ##################################################################################################
-# # # Export trained model to onnx after save pth model
-# #############################################################################################
-    export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
-#############################################################################################
+        # # training network NARX
+        clf.fit_NARX_Transformer(x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
+                    {"train_narx": fixed_train_loader,
+                "val_narx": fixed_val_loader,
+                "test_narx": fixed_test_loader},
+                epochs=2
+        )
+
+
+
+    # ##################################################################################################
+    # # # save pth model when training process is completed
+    # #############################################################################################
+        clf.save_to_file_Narx("save_params/")
+    #############################################################################################
+
+    # ##################################################################################################
+    # # # Export trained model to onnx after save pth model
+    # #############################################################################################
+        export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
+    #############################################################################################
 
 
 # ##################################################################################################
@@ -424,8 +447,9 @@ if train == True:
 
 # 🔹 Ejemplo de uso
 if inference ==  True:
-    modo = "onnx"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var.onnx"
+
+    modo = "pth"  # Cambia a "pth" para usar el modelo original
+    modelo ="save_params/trained_model_narx_2var.pth"
     realizar_inferencia_narx(fixed_test_loader, x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 
