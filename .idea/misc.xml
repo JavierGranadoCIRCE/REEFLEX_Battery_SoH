@@ -3,4 +3,7 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10" />
   </component>
+  <component name="PyCharmDSProjectLayout">
+    <option name="id" value="JupyterRightHiddenStructureLayout" />
+  </component>
 </project>

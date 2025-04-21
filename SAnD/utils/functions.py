@@ -309,6 +309,7 @@ def cargar_modelo_pth_finetuning(modelo, path_modelo):
 
 
 
+
 def cargar_modelo(modo="onnx", modelo = None):
     """Carga el modelo según el modo especificado."""
     if modo == "onnx":

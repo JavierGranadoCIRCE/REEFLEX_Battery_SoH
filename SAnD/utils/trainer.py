@@ -846,7 +846,7 @@ class NeuralNetworkClassifier:
             pbar.close()
 
 
-    def fit_NARX_Transformer_finetuning(self, epoch, optimizer_narx, modelo, x_train, y_train, x_val, y_val, x_test, y_test, loader: Dict[str, DataLoader], epochs: int, checkpoint_path: str = None, validation: bool = True, test: bool = True) -> None:
+    def fit_NARX_Transformer_finetuning(self, epoch, optimizer, modelo, x_train, y_train, x_val, y_val, x_test, y_test, loader: Dict[str, DataLoader], epochs: int, checkpoint_path: str = None, validation: bool = True, test: bool = True) -> None:
         # Loss function and optimizer
         """
         | The method of training your PyTorch Model.
@@ -875,7 +875,7 @@ class NeuralNetworkClassifier:
         :param validation:
         :return: None
         """
-        self.optimizer_narx = optimizer_narx
+        self.optimizer_narx = optimizer
         self._start_epoch = epoch
         scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer_narx, T_max=50, eta_min=1e-6)
         len_of_train_dataset = len(loader["train_narx"].dataset)
@@ -1437,7 +1437,7 @@ class NeuralNetworkClassifier:
         # file_name = "model_params-epochs_{}-{}.pth".format(
         #     self.hyper_params["epochs"], time.ctime().replace(" ", "_")
         # )
-        file_name = "trained_model_narx.pth"
+        file_name = "trained_model_narx_2var.pth"
         path = path + file_name
 
         checkpoints = self.save_checkpoint_narx()
@@ -1449,7 +1449,7 @@ class NeuralNetworkClassifier:
         return path
 
 
-    def save_to_file_Narx_finetuning(self, path: str) -> str:
+    def save_to_file_Narx_finetuning(self, file_name: str) -> str:
         """
         | The method of saving trained PyTorch model to file.
         | Those weights are uploaded to comet.ml as backup.
@@ -1473,16 +1473,16 @@ class NeuralNetworkClassifier:
         :param path: path to saving directory. : string
         :return: path to file : string
         """
+        path = "save_params/"
         if not os.path.isdir(path):
             os.mkdir(path)
 
         # file_name = "model_params-epochs_{}-{}.pth".format(
         #     self.hyper_params["epochs"], time.ctime().replace(" ", "_")
         # )
-        file_name = "trained_model_narx_2var_finetuning.pth"
-        path = path + file_name
 
         checkpoints = self.save_checkpoint_narx()
+        path = path + file_name
 
         # torch.save(checkpoints, path,{"hyperparameters": hyperparameters})
         torch.save(checkpoints, path)

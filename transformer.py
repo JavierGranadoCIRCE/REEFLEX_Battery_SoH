@@ -8,6 +8,7 @@ from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, 
 import scipy.io as scio
 import glob
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import matplotlib.pyplot as plt
 import onnxruntime as ort
 import numpy as np
@@ -154,7 +155,7 @@ x_pairs, cap_inputs, y_targets = create_cycle_triplets(data, labels)
 
 ######################################################################################
 # Mantener solo las dos primeras variables: V (0), I (1) para las olimpIAdas
-#x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
+x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
 #######################################################################################
 x_train_narx, x_temp_narx, cap_train, cap_temp, y_train_narx, y_temp_narx = train_test_split(
     x_pairs, cap_inputs, y_targets, test_size=0.2, random_state=42, shuffle=False)
@@ -350,11 +351,15 @@ clf = NeuralNetworkClassifier(
 
 inference = False
 if inference == True:
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
+    gc.collect()
     train = False
 elif inference == False:
     train = True
     finetuning = True
     torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
     gc.collect()
 
 ################################################################################
@@ -379,9 +384,9 @@ if train == True:
         modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer,"save_params/trained_model_narx_2var.pth")
         modelo = modelo.to(device)
         epoch = checkpoint['epoch']
-        optimizer_narx = optimizer = torch.optim.Adam(modelo.parameters(), lr=0.001)
-        optimizer_narx.load_state_dict(checkpoint['optimizer_state_dict'])
-        clf.fit_NARX_Transformer_finetuning(epoch, optimizer_narx, modelo, x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
+        optimizer = torch.optim.Adam(modelo.parameters())  # Usando el lr guardado
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        clf.fit_NARX_Transformer_finetuning(epoch, optimizer, modelo, x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
                                  {"train_narx": fixed_train_loader,
                                   "val_narx": fixed_val_loader,
                                   "test_narx": fixed_test_loader},
@@ -390,7 +395,7 @@ if train == True:
         # ##################################################################################################
         # # # save pth model when finetuning process is completed
         # #############################################################################################
-        clf.save_to_file_Narx_finetuning("save_params/")
+        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_finetuning.pth")
         #############################################################################################
 
     elif finetuning == False:
@@ -423,7 +428,7 @@ if train == True:
                     {"train_narx": fixed_train_loader,
                 "val_narx": fixed_val_loader,
                 "test_narx": fixed_test_loader},
-                epochs=2
+                epochs=200
         )
 
 
@@ -449,7 +454,7 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var.pth"
+    modelo ="save_params/trained_model_narx_2var_finetuning.pth"
     realizar_inferencia_narx(fixed_test_loader, x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 
