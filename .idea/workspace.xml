@@ -5,13 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5fd89106-d7ab-433d-b697-67b9eb2059d7" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SAnD/utils/functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/utils/functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SAnD/utils/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/utils/inference.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SAnD/utils/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/utils/trainer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save_params/trained_model_narx.pth" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/save_params/trained_model_narx_2var.onnx" beforeDir="false" afterPath="$PROJECT_DIR$/save_params/trained_model_narx_2var.onnx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformer.py" afterDir="false" />
     </list>
@@ -34,7 +28,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Python.transformer.executor": "Debug",
+    "Python.transformer.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",

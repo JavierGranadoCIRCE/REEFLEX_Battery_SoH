@@ -349,7 +349,7 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = False
+inference = True
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -357,7 +357,7 @@ if inference == True:
     train = False
 elif inference == False:
     train = True
-    finetuning = True
+    finetuning = False
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     gc.collect()
@@ -369,7 +369,7 @@ export_csv = False
 if export_csv == True:
     inference = False
     train = False
-    save_example_to_csv_narx(x_test_narx, cap_test, y_test_narx, 8, filename="save_params/ciclo_de_carga_narx_8.csv")
+    save_example_to_csv_narx(x_test_narx, cap_test, y_test_narx, 249, filename="save_params/ciclo_de_carga_narx_250.csv")
 ################################################################################
 
 
@@ -453,8 +453,8 @@ if train == True:
 # 🔹 Ejemplo de uso
 if inference ==  True:
 
-    modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_finetuning.pth"
+    modo = "onnx"  # Cambia a "pth" para usar el modelo original
+    modelo ="save_params/trained_model_narx_2var.onnx"
     realizar_inferencia_narx(fixed_test_loader, x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 
