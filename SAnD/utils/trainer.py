@@ -896,6 +896,7 @@ class NeuralNetworkClassifier:
         self.experiment.log_parameters(self.hyper_params)
 
         for epoch in range(self._start_epoch, epochs):
+            self.epoch = epoch
             total_samples = 0
             if checkpoint_path is not None and epoch % 100 == 0:
                 self.save_to_file_normal_improve(checkpoint_path)
@@ -1045,6 +1046,47 @@ class NeuralNetworkClassifier:
             pbar.close()
 
 
+
+
+    #
+    # def fit_NARX_Transformer_finetuning(self, epoch, optimizer, modelo,
+    #                                     x_pairs_fixed_train, y_targets_fixed_train,
+    #                                     x_pairs_fixed_val, y_targets_fixed_val,
+    #                                     x_pairs_fixed_test, y_targets_fixed_test,
+    #                                     loader: Dict[str, DataLoader],
+    #                                     epochs: int) -> None:
+    #     self.optimizer_narx = optimizer
+    #     self._start_epoch = epoch
+    #     self.modelo = modelo.to(self.device)
+    #     criterion = self.criterion_narx
+    #
+    #     for epoch in range(self._start_epoch, self._start_epoch + epochs):
+    #         self.modelo.train()
+    #         total_loss = 0.0
+    #         pbar = tqdm(loader["train_narx"], desc=f"Epoch {epoch+1}/{self._start_epoch + epochs}")
+    #
+    #         for x_batch, cap_batch, y_batch in pbar:
+    #             x_batch = x_batch.to(self.device)
+    #             cap_batch = cap_batch.to(self.device)
+    #             y_batch = y_batch.to(self.device).unsqueeze(1)
+    #
+    #             self.optimizer_narx.zero_grad()
+    #             outputs = self.modelo(x_batch, cap_batch)
+    #             loss = criterion(outputs, y_batch)
+    #             loss.backward()
+    #             self.optimizer_narx.step()
+    #
+    #             total_loss += loss.item()
+    #             pbar.set_postfix(loss=loss.item())
+    #
+    #         # Guardar modelo tras cada epoch
+    #         torch.save({
+    #             'epoch': epoch + 1,
+    #             'model_state_dict': self.modelo.state_dict(),
+    #             'optimizer_state_dict': self.optimizer_narx.state_dict()
+    #         }, "save_params/trained_model_narx_2var.pth")
+    #
+    #     print("Fine-tuning finalizado y modelo guardado.")
 
 
     def evaluate(self, loader: DataLoader, verbose: bool = False) -> None or float:
@@ -1451,44 +1493,26 @@ class NeuralNetworkClassifier:
 
     def save_to_file_Narx_finetuning(self, file_name: str) -> str:
         """
-        | The method of saving trained PyTorch model to file.
-        | Those weights are uploaded to comet.ml as backup.
-        | check "Asserts".
-
-        Note, .pth file contains
-            - the number of last epoch as `epochs`
-            - optimizer state as `optimizer_state_dict`
-            - model state as `model_state_dict`
-
-        ::
-
-            clf = NeuralNetworkClassifier(
-                    Network(), nn.CrossEntropyLoss(),
-                    optim.Adam, optimizer_config, experiment
-                )
-
-            clf.fit(train_loader, epochs=10)
-            filename = clf.save_to_file('path/to/save/dir/')
-
-        :param path: path to saving directory. : string
-        :return: path to file : string
+        Guarda el modelo fine-tuneado, incluyendo el estado del modelo,
+        del optimizador y la última época entrenada.
         """
         path = "save_params/"
         if not os.path.isdir(path):
             os.mkdir(path)
 
-        # file_name = "model_params-epochs_{}-{}.pth".format(
-        #     self.hyper_params["epochs"], time.ctime().replace(" ", "_")
-        # )
+        full_path = os.path.join(path, file_name)
 
-        checkpoints = self.save_checkpoint_narx()
-        path = path + file_name
+        torch.save({
+            'epoch': self.epoch + 1,
+            'model_state_dict': self.modelo.state_dict(),
+            'optimizer_state_dict': self.optimizer_narx.state_dict()
+        }, full_path)
 
-        # torch.save(checkpoints, path,{"hyperparameters": hyperparameters})
-        torch.save(checkpoints, path)
-        self.experiment.log_asset(path, file_name=file_name)
+        print(f"Modelo guardado en {full_path}")
 
-        return path
+        self.experiment.log_asset(full_path, file_name=file_name)
+
+        return full_path
 
 
 

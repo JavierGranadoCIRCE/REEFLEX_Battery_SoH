@@ -357,7 +357,7 @@ if inference == True:
     train = False
 elif inference == False:
     train = True
-    finetuning = False
+    finetuning = True
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     gc.collect()
@@ -453,8 +453,8 @@ if train == True:
 # 🔹 Ejemplo de uso
 if inference ==  True:
 
-    modo = "onnx"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var.onnx"
+    modo = "pth"  # Cambia a "pth" para usar el modelo original
+    modelo ="save_params/trained_model_narx_2var_finetuning.pth"
     realizar_inferencia_narx(fixed_test_loader, x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 
