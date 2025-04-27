@@ -1,9 +1,10 @@
 from comet_ml import Experiment
 import torch.nn as nn
 import torch.optim as optim
+import random
 from SAnD.utils.inference import Inference_SoH_Siamese, Inference_SoH_Normal, Inference_SoH_Normal_Improve, Inference_SoH_NARX
 from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, create_cycle_triplets, \
-    realizar_inferencia_narx, WrappedModel_NARX, export_trained_model_to_onnx, ploteo_NARX, \
+    realizar_inferencia_narx, WrappedModel_NARX,  export_trained_model_to_onnx, ploteo_NARX, \
     ploteo_NN4SOH_aaptado_a_NARX, ploteo_NN4SOH, count_parameters, cargar_modelo_pth_finetuning
 import scipy.io as scio
 import glob
@@ -182,10 +183,11 @@ cap_inputs_fixed = []
 y_targets_fixed = []
 
 for i in range(len(x_test_narx)):
+    j = random.randint(0, 249)
     current_cycle = x_test_narx[i][1]  # ciclo actual del par
     soh_target = y_test_narx[i]       # SoH objetivo de este ciclo
-    historical_cycle = x_test_narx[i][1]  # ciclo actual del par
-    historical_soh = y_test_narx[i].unsqueeze(-1)
+    historical_cycle = x_test_narx[j][1]  # ciclo actual del par
+    historical_soh = cap_test[j]
 
     x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
     x_pairs_fixed.append(x_pair)
@@ -205,11 +207,13 @@ x_pairs_fixed = []
 cap_inputs_fixed = []
 y_targets_fixed = []
 
-for i in range(len(x_train_narx)):
-    current_cycle = x_train_narx[i][1]  # ciclo actual del par
-    soh_target = y_train_narx[i]       # SoH objetivo de este ciclo
+for i in range(len(x_train_narx)-1):
+    b = len(x_train_narx)-1
+    j = random.randint(0, len(x_train_narx)-1)
+    current_cycle = x_train_narx[i+1][1]  # ciclo actual del par
+    soh_target = y_train_narx[i+1]       # SoH objetivo de este ciclo
     historical_cycle = x_train_narx[i][1]  # ciclo actual del par
-    historical_soh = y_train_narx[i].unsqueeze(-1)
+    historical_soh = cap_train[i]
 
     x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
     x_pairs_fixed.append(x_pair)
@@ -234,7 +238,7 @@ for i in range(len(x_val_narx)):
     current_cycle = x_val_narx[i][1]  # ciclo actual del par
     soh_target = y_val_narx[i]       # SoH objetivo de este ciclo
     historical_cycle = x_val_narx[i][1]  # ciclo actual del par
-    historical_soh = y_val_narx[i].unsqueeze(-1)
+    historical_soh = cap_val[i]
 
 
     x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
@@ -353,14 +357,18 @@ inference = True
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
+    import gc
     gc.collect()
+    torch.cuda.empty_cache()
     train = False
 elif inference == False:
     train = True
-    finetuning = True
+    finetuning = False
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
+    import gc
     gc.collect()
+    torch.cuda.empty_cache()
 
 ################################################################################
 ##### save example to csv for running inference on Raspberry Pi ################
@@ -381,7 +389,7 @@ if export_csv == True:
 if train == True:
 
     if finetuning == True:
-        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer,"save_params/trained_model_narx_2var.pth")
+        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer,"save_params/trained_model_narx_2var_tripletes_random.pth")
         modelo = modelo.to(device)
         epoch = checkpoint['epoch']
         optimizer = torch.optim.Adam(modelo.parameters())  # Usando el lr guardado
@@ -390,12 +398,12 @@ if train == True:
                                  {"train_narx": fixed_train_loader,
                                   "val_narx": fixed_val_loader,
                                   "test_narx": fixed_test_loader},
-                                 epochs=2
+                                 epochs=1000
                                  )
         # ##################################################################################################
         # # # save pth model when finetuning process is completed
         # #############################################################################################
-        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_finetuning.pth")
+        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_tripletes_random.pth")
         #############################################################################################
 
     elif finetuning == False:
@@ -424,11 +432,11 @@ if train == True:
         # )
 
         # # training network NARX
-        clf.fit_NARX_Transformer(x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
-                    {"train_narx": fixed_train_loader,
-                "val_narx": fixed_val_loader,
-                "test_narx": fixed_test_loader},
-                epochs=200
+        clf.fit_NARX_Transformer(x_train_narx, y_train_narx, x_val_narx, y_val_narx, x_test_narx, y_test_narx,
+                    {"train_narx": train_loader_narx,
+                "val_narx": val_loader_narx,
+                "test_narx": test_loader_narx},
+                epochs=2000
         )
 
 
@@ -454,8 +462,9 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_finetuning.pth"
-    realizar_inferencia_narx(fixed_test_loader, x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
+    modelo ="save_params/trained_model_narx_2var_tripletes_random.pth"
+    realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
+    #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 
 

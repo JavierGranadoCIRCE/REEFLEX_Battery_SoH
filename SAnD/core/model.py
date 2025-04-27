@@ -220,6 +220,51 @@ class NARX_Transformer_2var(nn.Module):
             pred_caps = torch.cat([pred_caps, pred], axis=-1)
         return pred_caps
 # #
+
+
+class NARX_Transformer_2var_SoloActual(nn.Module):
+    def __init__(self, feature_dim1, feature_dim2, num_attention, num_cycles, num_preds):
+        super(NARX_Transformer_2var_SoloActual, self).__init__()
+        self.num_cycles = num_cycles
+        self.num_preds = num_preds
+        self.cap_linear_layer = nn.Linear(self.num_cycles-1, feature_dim2)
+        self.final_linear_layer = nn.Linear(feature_dim2, 1)
+
+        self.conv_layer = nn.Conv2d(in_channels=2, out_channels=feature_dim1, kernel_size=3, stride=1, padding=1)
+        self.conv_layer2 = nn.Conv2d(in_channels=feature_dim1, out_channels=feature_dim2, kernel_size=3, padding=1)
+        self.encoder_layer = nn.TransformerEncoderLayer(d_model=feature_dim2, nhead=num_attention, batch_first=True)
+        self.decoder_layer = nn.TransformerDecoderLayer(d_model=feature_dim2, nhead=num_attention, batch_first=True)
+
+    def forward(self, my_data, capacity):
+        # Solo usamos el segundo ciclo (índice 1), descartamos el histórico
+        current_cycle = my_data[:, 1, :, :]  # (batch, 400, 2)
+        current_cycle = current_cycle.permute(0, 2, 1).unsqueeze(2)  # (batch, 2, 1, 400)
+
+        embedded_data = self.conv_layer(current_cycle)
+        embedded_data = self.conv_layer2(embedded_data)
+
+        batch_size, channels, h, w = embedded_data.shape
+        embedded_data = embedded_data.view(batch_size, channels, h * w).permute(0, 2, 1)  # (B, seq_len, feature_dim2)
+
+        encoded_data = self.encoder_layer(embedded_data)
+
+        pooled = torch.mean(encoded_data, dim=1)  # (B, feature_dim2)
+        output_cap = self.final_linear_layer(pooled)  # (B, 1)
+
+        return output_cap
+
+    def pred_sequence(self, my_data, capacity):
+        pred_caps = torch.stack([capacity[:, i] for i in range(self.num_cycles - 1)], axis=-1)
+        for cycle in range(self.num_preds):
+            pred = self.forward(my_data[:, cycle:cycle + self.num_cycles], pred_caps[:, -self.num_cycles + 1:])
+            pred_caps = torch.cat([pred_caps, pred], axis=-1)
+        return pred_caps
+
+
+
+
+
+
 #
 #
 #

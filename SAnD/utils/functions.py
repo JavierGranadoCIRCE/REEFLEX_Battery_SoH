@@ -13,8 +13,6 @@ from typing import Dict
 from SAnD.core.model import NARX_Transformer_2var, NARX_Transformer
 from SAnD.utils.inference import Inference_SoH_NARX
 
-
-
 with open('config.yaml', 'r') as file:
     cfg = yaml.safe_load(file)
 
@@ -124,9 +122,11 @@ def create_cycle_triplets(data, labels):
     y_targets = []
 
     for i in range(1, len(data) - 1):
-        x_pair = torch.stack([data[i], data[i+1]])  # (2, 400, 3)
+        j = random.randint(0, len(data) - 1)
+        j = i
+        x_pair = torch.stack([data[j], data[i+1]])  # (2, 400, 3)
         x_pairs.append(x_pair)
-        capacities.append(labels[i])       # SoH del ciclo anterior
+        capacities.append(labels[j])       # SoH del ciclo anterior
         y_targets.append(labels[i+1])      # SoH del ciclo actual (target)
 
     x_pairs = torch.stack(x_pairs)
@@ -202,7 +202,6 @@ def save_example_to_csv_narx(x_pair, cap_input, y_target, example_idx, filename=
 
 def realizar_inferencia_narx(loader, x_test, cap_input_test, y_test,  modo="onnx", modelo=None):
     """Realiza la inferencia usando ONNX o PyTorch y calcula métricas."""
-
     mae_total,  mse_sum = 0, 0
     smape_total, mape_total = 0, 0
     real_values = []
@@ -353,6 +352,8 @@ class WrappedModel_NARX(nn.Module):
 
     def forward(self, x_pair, cap_input):
         return self.base_model(x_pair, cap_input)
+
+
 
 
 ##########################################################################
