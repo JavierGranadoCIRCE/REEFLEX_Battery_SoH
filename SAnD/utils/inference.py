@@ -210,15 +210,15 @@ class Inference_SoH_Normal_Improve:
 class Inference_SoH_NARX:
     def __init__(self, model_path, input_features, seq_len, n_heads, num_cycles, num_preds, device="cuda"):
         self.device = device
-        #self.sand_model = NARX_Transformer_2var_SoloActual(input_features, seq_len, n_heads, num_cycles, num_preds)
+        self.sand_model = NARX_Transformer_2var_SoloActual(input_features, seq_len, n_heads, num_cycles, num_preds)
         #self.sand_model = NARX_Transformer_2var(input_features, seq_len, n_heads, num_cycles, num_preds)
-        self.sand_model = NARX_Transformer(input_features, seq_len, n_heads, num_cycles, num_preds)
+        #self.sand_model = NARX_Transformer(input_features, seq_len, n_heads, num_cycles, num_preds)
 
         # Cargar los pesos del modelo entrenado
         checkpoint = torch.load(model_path, map_location=device)
         print(checkpoint.keys())
 
-        self.sand_model.load_state_dict(checkpoint["model_state_dict"])
+        self.sand_model.load_state_dict(checkpoint["model_state_dict"], strict=False)
 
         self.sand_model.to(device)
         self.sand_model.eval()
@@ -229,13 +229,13 @@ class Inference_SoH_NARX:
         soh_real = []
         test_total = []
         with torch.no_grad():
-            for x_test_narx, cap_test, y_test_narx in test_loader_narx:
+            for x_test_narx, y_test_narx in test_loader_narx:
                 x_test_narx = x_test_narx.to(self.device) if isinstance(x_test_narx, torch.Tensor) else [i_val.to(self.device) for i_val in x_test_narx]
                 y_test_narx = y_test_narx.to(self.device)
                 b_size = y_test_narx.shape
                 test_total += y_test_narx.shape
-                cap_test = cap_test.to(self.device)
-                soh_pred = self.sand_model(x_test_narx, cap_test)
+                #cap_test = cap_test.to(self.device)
+                soh_pred = self.sand_model(x_test_narx)
                 predictions.append(soh_pred.cpu())
                 soh_real.append(y_test_narx.cpu().numpy())
 

@@ -122,11 +122,9 @@ def create_cycle_triplets(data, labels):
     y_targets = []
 
     for i in range(1, len(data) - 1):
-        j = random.randint(0, len(data) - 1)
-        j = i
-        x_pair = torch.stack([data[j], data[i+1]])  # (2, 400, 3)
+        x_pair = torch.stack([data[i], data[i+1]])  # (2, 400, 3)
         x_pairs.append(x_pair)
-        capacities.append(labels[j])       # SoH del ciclo anterior
+        capacities.append(labels[i])       # SoH del ciclo anterior
         y_targets.append(labels[i+1])      # SoH del ciclo actual (target)
 
     x_pairs = torch.stack(x_pairs)
@@ -200,7 +198,7 @@ def save_example_to_csv_narx(x_pair, cap_input, y_target, example_idx, filename=
 
     print(f"Ejemplo {example_idx} guardado en {filename}")
 
-def realizar_inferencia_narx(loader, x_test, cap_input_test, y_test,  modo="onnx", modelo=None):
+def realizar_inferencia_narx(loader, x_test, y_test,  modo="onnx", modelo=None):
     """Realiza la inferencia usando ONNX o PyTorch y calcula métricas."""
     mae_total,  mse_sum = 0, 0
     smape_total, mape_total = 0, 0
@@ -213,12 +211,12 @@ def realizar_inferencia_narx(loader, x_test, cap_input_test, y_test,  modo="onnx
         session, input_names = cargar_modelo(modo, modelo)
         for i in range(len(x_test)):
             x_sample = x_test[i].numpy().astype(np.float32)[np.newaxis, ...]       # (1, 2, 400, 3)
-            cap_sample = cap_input_test[i].numpy().astype(np.float32)[np.newaxis]  # (1, 1)
+            #cap_sample = cap_input_test[i].numpy().astype(np.float32)[np.newaxis]  # (1, 1)
 
             # Inferencia con ONNX
             output = session.run(None, {
                 input_names[0]: x_sample,
-                input_names[1]: cap_sample
+                #input_names[1]: cap_sample
             })[0]
             pred = output[0][0]  # (1,)
             real = y_test[i].item()

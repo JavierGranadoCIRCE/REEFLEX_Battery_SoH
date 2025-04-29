@@ -16,7 +16,8 @@ import numpy as np
 import yaml
 from dataset import load_NASA
 from SAnD.core.modules import ContrastiveLoss
-from SAnD.core.model import SAnD, SAnD_Embedding, SiameseSAnD, SAnDImprove, NARX_Transformer, NARX_Transformer_2var
+from SAnD.core.model import SAnD, SAnD_Embedding, SiameseSAnD, SAnDImprove, NARX_Transformer, NARX_Transformer_2var, \
+    NARX_Transformer_2var_SoloActual
 from SAnD.utils.trainer import NeuralNetworkClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -263,6 +264,7 @@ fixed_val_loader = DataLoader(fixed_val_ds, batch_size=32, shuffle=False)
 
 
 # Dividir en train, val y test (estratificado si `labels` tiene clases desbalanceadas)
+data = data[:, :, :2]  # -> ahora (num_samples, 400, 2)
 x_train, x_temp, y_train, y_temp = train_test_split(data, labels, test_size=0.2, random_state=42, shuffle=False)
 x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42, shuffle=False)
 
@@ -331,7 +333,7 @@ clf = NeuralNetworkClassifier(
     SiameseSAnD(SAnD_Embedding(in_feature, seq_len, n_heads, factor, num_class, num_layers)),
     SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers),
     SAnDImprove(in_feature, seq_len, n_heads, factor, num_class, num_layers),
-    NARX_Transformer(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
+    NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
     ContrastiveLoss(),
     nn.MSELoss(),
     nn.MSELoss(),
@@ -353,7 +355,7 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = True
+inference = False
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -403,7 +405,7 @@ if train == True:
         # ##################################################################################################
         # # # save pth model when finetuning process is completed
         # #############################################################################################
-        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_tripletes_random.pth")
+        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_1ciclo.pth")
         #############################################################################################
 
     elif finetuning == False:
@@ -432,11 +434,15 @@ if train == True:
         # )
 
         # # training network NARX
-        clf.fit_NARX_Transformer(x_train_narx, y_train_narx, x_val_narx, y_val_narx, x_test_narx, y_test_narx,
-                    {"train_narx": train_loader_narx,
-                "val_narx": val_loader_narx,
-                "test_narx": test_loader_narx},
-                epochs=2000
+        x_train = x_train.unsqueeze(1)
+        x_val = x_val.unsqueeze(1)
+        x_test = x_test.unsqueeze(1)
+
+        clf.fit_NARX_Transformer(x_train, y_train, x_val, y_val, x_test, y_test,
+                    {"train_narx": train_loader,
+                "val_narx": val_loader,
+                "test_narx": test_loader},
+                epochs=1000
         )
 
 
@@ -462,8 +468,9 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_tripletes_random.pth"
-    realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
+    modelo ="save_params/trained_model_narx_2var_1ciclo.pth"
+    realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
+    #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 

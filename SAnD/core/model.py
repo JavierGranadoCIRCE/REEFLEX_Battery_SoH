@@ -227,41 +227,65 @@ class NARX_Transformer_2var_SoloActual(nn.Module):
         super(NARX_Transformer_2var_SoloActual, self).__init__()
         self.num_cycles = num_cycles
         self.num_preds = num_preds
-        self.cap_linear_layer = nn.Linear(self.num_cycles-1, feature_dim2)
-        self.final_linear_layer = nn.Linear(feature_dim2, 1)
 
-        self.conv_layer = nn.Conv2d(in_channels=2, out_channels=feature_dim1, kernel_size=3, stride=1, padding=1)
-        self.conv_layer2 = nn.Conv2d(in_channels=feature_dim1, out_channels=feature_dim2, kernel_size=3, padding=1)
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=feature_dim2, nhead=num_attention, batch_first=True)
-        self.decoder_layer = nn.TransformerDecoderLayer(d_model=feature_dim2, nhead=num_attention, batch_first=True)
+        # Encoder CNN
+        self.conv_layer = nn.Sequential(
+            nn.Conv1d(in_channels=2, out_channels=feature_dim1, kernel_size=5, padding=2),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=feature_dim1, out_channels=feature_dim2, kernel_size=5, padding=2),
+            nn.ReLU(),
+        )
 
-    def forward(self, my_data, capacity):
-        # Solo usamos el segundo ciclo (índice 1), descartamos el histórico
-        current_cycle = my_data[:, 1, :, :]  # (batch, 400, 2)
-        current_cycle = current_cycle.permute(0, 2, 1).unsqueeze(2)  # (batch, 2, 1, 400)
+        # Transformer Encoder
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            d_model=feature_dim2,
+            nhead=num_attention,
+            batch_first=True,
+            dim_feedforward=feature_dim2 * 4,
+            dropout=0.1
+        )
 
-        embedded_data = self.conv_layer(current_cycle)
-        embedded_data = self.conv_layer2(embedded_data)
+        # Head final para predicción
+        self.fc = nn.Sequential(
+            nn.Linear(feature_dim2, feature_dim2 // 2),
+            nn.ReLU(),
+            nn.Linear(feature_dim2 // 2, 1)
+        )
 
-        batch_size, channels, h, w = embedded_data.shape
-        embedded_data = embedded_data.view(batch_size, channels, h * w).permute(0, 2, 1)  # (B, seq_len, feature_dim2)
+    def forward(self, my_data):
+        # my_data tiene forma (batch, 400, 2)
+        current_cycle = my_data.permute(0, 2, 1)  # (batch, 2, 400)
 
-        encoded_data = self.encoder_layer(embedded_data)
+        embedded_data = self.conv_layer(current_cycle)  # (batch, feature_dim2, 400)
 
-        pooled = torch.mean(encoded_data, dim=1)  # (B, feature_dim2)
-        output_cap = self.final_linear_layer(pooled)  # (B, 1)
+        embedded_data = embedded_data.permute(0, 2, 1)  # (batch, 400, feature_dim2)
+
+        encoded_data = self.encoder_layer(embedded_data)  # (batch, 400, feature_dim2)
+
+        pooled = torch.mean(encoded_data, dim=1)  # (batch, feature_dim2)
+
+        output_cap = self.fc(pooled)  # (batch, 1)
 
         return output_cap
 
-    def pred_sequence(self, my_data, capacity):
-        pred_caps = torch.stack([capacity[:, i] for i in range(self.num_cycles - 1)], axis=-1)
-        for cycle in range(self.num_preds):
-            pred = self.forward(my_data[:, cycle:cycle + self.num_cycles], pred_caps[:, -self.num_cycles + 1:])
-            pred_caps = torch.cat([pred_caps, pred], axis=-1)
-        return pred_caps
+    def pred_sequence(self, my_data):
+        """
+        Inferencia secuencial.
+        Asume que my_data tiene forma (batch, total_ciclos, 400, 2)
+        """
+        preds = []
 
+        total_ciclos = my_data.size(1)
 
+        for cycle in range(total_ciclos):
+            current_cycle = my_data[:, cycle, :, :]  # (batch, 400, 2)
 
+            pred = self.forward(current_cycle)  # (batch, 1)
+            preds.append(pred)
+
+        preds = torch.cat(preds, dim=1)  # (batch, total_ciclos)
+
+        return preds
 
 
 
