@@ -7,9 +7,9 @@
     <list default="true" id="5fd89106-d7ab-433d-b697-67b9eb2059d7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/SAnD/core/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/core/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SAnD/utils/functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/utils/functions.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/SAnD/utils/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/utils/inference.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/SAnD/utils/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/SAnD/utils/trainer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/save_params/trained_model_narx_2var_1ciclo.pth" beforeDir="false" afterPath="$PROJECT_DIR$/save_params/trained_model_narx_2var_1ciclo.pth" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -108,51 +108,6 @@
           <option name="timeStamp" value="56" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>897</line>
-          <option name="timeStamp" value="62" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>900</line>
-          <option name="timeStamp" value="63" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>901</line>
-          <option name="timeStamp" value="64" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>902</line>
-          <option name="timeStamp" value="65" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>907</line>
-          <option name="timeStamp" value="66" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>908</line>
-          <option name="timeStamp" value="67" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>913</line>
-          <option name="timeStamp" value="68" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>922</line>
-          <option name="timeStamp" value="69" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/SAnD/utils/trainer.py</url>
-          <line>923</line>
-          <option name="timeStamp" value="70" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/transformer.py</url>
           <line>197</line>
           <option name="timeStamp" value="100" />
@@ -164,13 +119,18 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/transformer.py</url>
-          <line>357</line>
+          <line>371</line>
           <option name="timeStamp" value="102" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/transformer.py</url>
           <line>160</line>
           <option name="timeStamp" value="105" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/transformer.py</url>
+          <line>280</line>
+          <option name="timeStamp" value="109" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

@@ -17,7 +17,7 @@ import yaml
 from dataset import load_NASA
 from SAnD.core.modules import ContrastiveLoss
 from SAnD.core.model import SAnD, SAnD_Embedding, SiameseSAnD, SAnDImprove, NARX_Transformer, NARX_Transformer_2var, \
-    NARX_Transformer_2var_SoloActual
+    NARX_Transformer_2var_SoloActual, NARX_Transformer_3var_SoloActual
 from SAnD.utils.trainer import NeuralNetworkClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -265,6 +265,19 @@ fixed_val_loader = DataLoader(fixed_val_ds, batch_size=32, shuffle=False)
 
 # Dividir en train, val y test (estratificado si `labels` tiene clases desbalanceadas)
 data = data[:, :, :2]  # -> ahora (num_samples, 400, 2)
+
+# Normalización canal a canal (por media y std global)
+
+# Normaliza canal a canal
+means = data.mean(dim=(0, 1), keepdim=True)  # media por canal
+stds = data.std(dim=(0, 1), keepdim=True)    # std por canal
+
+data = (data - means) / stds  # normalización global por canal
+
+# Guardar para uso posterior
+torch.save({'mean': means, 'std': stds}, 'save_params/normalization_stats.pt')
+
+
 x_train, x_temp, y_train, y_temp = train_test_split(data, labels, test_size=0.2, random_state=42, shuffle=False)
 x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42, shuffle=False)
 
@@ -334,12 +347,13 @@ clf = NeuralNetworkClassifier(
     SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers),
     SAnDImprove(in_feature, seq_len, n_heads, factor, num_class, num_layers),
     NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
+    #NARX_Transformer_3var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
     ContrastiveLoss(),
     nn.MSELoss(),
     nn.MSELoss(),
-    nn.L1Loss(),
-    #nn.SmoothL1Loss(beta=0.1),  # Cambiar a SmoothL1Loss,
-    optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 4e-09, "weight_decay": 5e-4},
+    #nn.L1Loss(),
+    nn.SmoothL1Loss(beta=0.1),  # Cambiar a SmoothL1Loss,
+    optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
     # optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.96), "eps": 1e-08, "weight_decay": 1e-6},
     # optim.SGD, optimizer_config={"lr":1e-6, "momentum": 0.9,"weight_decay": 1e-4},
     #experiment=Experiment("8mKGHiYeg2P7dZEFlvQv3PEzc")
@@ -437,13 +451,21 @@ if train == True:
         x_train = x_train.unsqueeze(1)
         x_val = x_val.unsqueeze(1)
         x_test = x_test.unsqueeze(1)
-
+        #
         clf.fit_NARX_Transformer(x_train, y_train, x_val, y_val, x_test, y_test,
                     {"train_narx": train_loader,
                 "val_narx": val_loader,
                 "test_narx": test_loader},
                 epochs=1000
         )
+
+
+        # clf.fit_NARX_Transformer3V(x_train, y_train, x_val, y_val, x_test, y_test,
+        #              {"train_narx": train_loader,
+        #               "val_narx": val_loader,
+        #               "test_narx": test_loader},
+        #              epochs=200
+        # )
 
 
 

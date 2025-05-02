@@ -645,39 +645,10 @@ class NeuralNetworkClassifier:
 
 
 
-    def fit_NARX_Transformer(self,x_train, y_train, x_val, y_val, x_test, y_test, loader: Dict[str, DataLoader], epochs: int, checkpoint_path: str = None, validation: bool = True, test: bool = True) -> None:
-        # Loss function and optimizer
-        """
-        | The method of training your PyTorch Model.
-        | With the assumption, This method use for training network for classification.
-
-        ::
-
-            train_ds = Subset(train_val_ds, train_index)
-            val_ds = Subset(train_val_ds, val_index)
-
-            train_val_loader = {
-                "train": DataLoader(train_ds, batch_size),
-                "val": DataLoader(val_ds, batch_size)
-            }
-
-            clf = NeuralNetworkClassifier(
-                    Network(), nn.CrossEntropyLoss(),
-                    optim.Adam, optimizer_config, experiment
-                )
-            clf.fit(train_val_loader, epochs=10)
 
 
-        :param loader: Dictionary which contains Data Loaders for training and validation.: dict{DataLoader, DataLoader}
-        :param epochs: The number of epochs: int
-        :param checkpoint_path: str
-        :param validation:
-        :return: None
-        """
 
-
-        # Definir el scheduler StepLR: reduce el learning rate cada 10 epochs por un factor de 0.1
-        # scheduler = optim.lr_scheduler.StepLR(self.optimizer_ni, step_size=5, gamma=0.5)
+    def fit_NARX_Transformer3V(self, x_train, y_train, x_val, y_val, x_test, y_test, loader: Dict[str, DataLoader], epochs: int, checkpoint_path: str = None, validation: bool = True, test: bool = True) -> None:
         scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer_narx, T_max=50, eta_min=1e-6)
         len_of_train_dataset = len(loader["train_narx"].dataset)
         epochs = epochs + self._start_epoch
@@ -697,9 +668,9 @@ class NeuralNetworkClassifier:
         self.experiment.log_parameters(self.hyper_params)
 
         for epoch in range(self._start_epoch, epochs):
-            total_samples = 0
             if checkpoint_path is not None and epoch % 100 == 0:
                 self.save_to_file_normal_improve(checkpoint_path)
+
             with self.experiment.train():
                 train_correct = 0.0
                 total_loss = 0.0
@@ -707,344 +678,200 @@ class NeuralNetworkClassifier:
 
                 self.model_narx.train()
                 pbar = tqdm(total=len_of_train_dataset)
-                # for data in loader["train_narx"]:
-                #     print(data)
-                #     break  # Para ver solo el primer lote
-                for x_train_narx, y_train_narx in loader["train_narx"]:
-                    b_size = y_train_narx.shape[0]
-                    total_samples += y_train_narx.shape[0]
-                    x_train_narx = x_train_narx.to(self.device)  # (batch_size, 2, 400, 3)
-                    #cap_train = cap_train.to(self.device)  # (batch_size, 1)
-                    y_train_narx = y_train_narx.to(self.device)    # (batch_size)
+                for x_batch, y_batch in loader["train_narx"]:
+                    b_size = y_batch.shape[0]
+                    total_samples += b_size
 
-                    pbar.set_description("\033[36m" + "Training" + "\033[0m" + " - Epochs: {:03d}/{:03d}".format(epoch+1, epochs))
+                    x_batch = x_batch.to(self.device)  # (batch_size, 400, 3)
+                    y_batch = y_batch.to(self.device)  # (batch_size)
+
+                    pbar.set_description("\033[36mTraining\033[0m - Epochs: {:03d}/{:03d}".format(epoch + 1, epochs))
                     pbar.update(b_size)
+
                     self.optimizer_narx.zero_grad()
-                    train_output = self.model_narx(x_train_narx)
-                    train_loss = self.criterion_narx(train_output, y_train_narx.unsqueeze(1))
-                    train_loss.backward()
+                    outputs = self.model_narx(x_batch)
+                    loss = self.criterion_narx(outputs, y_batch.unsqueeze(1))
+                    loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.model_narx.parameters(), max_norm=1.0)
                     self.optimizer_narx.step()
-                    # _, train_pred = torch.max(train_output, 1)
-                    # #val_correct += (val_pred == y_val).sum().float().item()
-                    # train_correct += (train_pred.to(self.device) == y_train.to(self.device)).sum().float().item()
 
-                    # Predicciones continuas
-                    train_pred = train_output
-
-                    # Comparar las predicciones con las etiquetas reales usando una métrica de error
-                    #train_loss = torch.nn.functional.mse_loss(train_pred, y_train.to(self.device))
-                    # train_loss = torch.nn.functional.mse_loss(train_pred, y_train.unsqueeze(1).to(self.device))
-
-
-                    # Si quieres llevar un conteo de cuántas predicciones están cerca del valor real (por ejemplo, dentro de un umbral)
-                    threshold = 0.1  # Definir un umbral de tolerancia para considerarlo "correcto"
-                    correct_preds = ((train_pred - y_train.to(self.device)).abs() < threshold).sum().float().item()
+                    threshold = 0.1
+                    correct_preds = ((outputs - y_batch.unsqueeze(1)).abs() < threshold).sum().float().item()
                     train_correct += correct_preds
 
-                    total_samples = 24950
-                    self.experiment.log_metric("loss", train_loss.item(), step=epoch)
+                    self.experiment.log_metric("loss", loss.item(), step=epoch)
                     self.experiment.log_metric("accuracy", float(train_correct / total_samples), step=epoch)
 
-                    # Actualizar métricas
-                    total_loss += train_loss.item()
-                    avg_loss = total_loss / total_samples
+                    total_loss += loss.item()
+                pbar.close()
 
-                    # Registrar métricas en Comet o donde sea necesario
-                    #self.experiment.log_metric("loss", avg_loss.item(), step=epoch)
-                    #self.experiment.log_metric("loss", float(avg_loss), step=epoch)
-                    # self.experiment.log_metric("avg_loss", avg_loss, step=epoch)
-
-                    # Registrar distancia media entre pares (métrica clave en aprendizaje siamés)
-                    #avg_distance = torch.nn.functional.pairwise_distance(emb1, emb2).mean().item()
-                    # self.experiment.log_metric("avg_embedding_distance", avg_distance, step=epoch)
             if validation:
-                len_of_val_dataset = len(loader["val_narx"].dataset)
                 with self.experiment.validate():
+                    self.model_narx.eval()
+                    val_correct = 0.0
+                    val_total = 0.0
+                    pbar = tqdm(total=len_of_val_dataset)
                     with torch.no_grad():
-                        val_correct = 0.0
-                        val_total = 0.0
+                        for x_batch, y_batch in loader["val_narx"]:
+                            b_size = y_batch.shape[0]
+                            val_total += b_size
 
-                        self.model_narx.eval()
-                        pbar = tqdm(total=len_of_val_dataset)
-                        for x_val_narx, y_val_narx in loader["val_narx"]:
-                            b_size = y_val_narx.shape[0]
-                            val_total += y_val_narx.shape[0]
-                            x_val_narx = x_val_narx.to(self.device) if isinstance(x_val_narx, torch.Tensor) else [i_val.to(self.device) for i_val in x_val_narx]
-                            y_val_narx = y_val_narx.to(self.device)
-                            #cap_val = cap_val.to(self.device)
+                            x_batch = x_batch.to(self.device)
+                            y_batch = y_batch.to(self.device)
 
-                            pbar.set_description(
-                                "\033[36m" + "Validating" + "\033[0m" + " - Epochs: {:03d}/{:03d}".format(epoch+1, epochs)
-                            )
+                            pbar.set_description("\033[36mValidating\033[0m - Epochs: {:03d}/{:03d}".format(epoch + 1, epochs))
                             pbar.update(b_size)
 
-                            val_output = self.model_narx(x_val_narx)
-                            val_loss = self.criterion_narx(val_output, y_val_narx)
-                            _, val_pred = torch.max(val_output, 1)
-                            val_correct += (val_pred == y_val_narx).sum().float().item()
+                            outputs = self.model_narx(x_batch)
+                            val_loss = self.criterion_narx(outputs, y_batch.unsqueeze(1))
+                            self.experiment.log_metric("val_loss", val_loss.item(), step=epoch)
+                    pbar.close()
 
-                            # self.experiment.log_metric("loss", val_loss.item(), step=epoch)
-                            # self.experiment.log_metric("accuracy", float(val_correct / val_total), step=epoch)
-            # Paso del scheduler después de cada epoch
             scheduler.step()
-            # Mostrar el learning rate actual
-            print(f'Epoch [{epoch+1}/{epochs}], Learning Rate: {scheduler.get_last_lr()[0]}')
+            print(f"Epoch [{epoch + 1}/{epochs}], Learning Rate: {scheduler.get_last_lr()[0]}")
 
             if test:
-                len_of_test_dataset = len(loader["test_narx"].dataset)
                 with self.experiment.test():
-                    running_loss = 0.0
-                    running_corrects = 0.0
+                    self.model_narx.eval()
+                    test_correct = 0.0
+                    total_test_samples = 0.0
+                    pbar = tqdm(total=len_of_test_dataset)
                     with torch.no_grad():
-                        test_correct = 0.0
-                        test_total = 0.0
-                        self.model_narx.eval()
-                        pbar = tqdm(total=len_of_test_dataset)
-                        for x_test_narx, y_test_narx  in loader["test_narx"]:
-                            b_size = y_test_narx.shape[0]
-                            test_total += y_test_narx.shape[0]
-                            x_test_narx = x_test_narx.to(self.device) if isinstance(x_test_narx, torch.Tensor) else [i_val.to(self.device) for i_val in x_test_narx]
-                            y_test_narx = y_test_narx.to(self.device)
-                            #cap_test = cap_test.to(self.device)
-                            # x=y[0]
-                            # y=y[1]
-                            # #x = x.to(self.device) if isinstance(x, torch.Tensor) else [i.to(self.device) for i in x]
-                            # y = y.to(self.device)
+                        for x_batch, y_batch in loader["test_narx"]:
+                            b_size = y_batch.shape[0]
+                            total_test_samples += b_size
 
-                            pbar.set_description(
-                                "\033[36m" + "Testing" + "\033[0m" + " - Epochs: {:03d}/{:03d}".format(epoch+1, epochs)
-                            )
+                            x_batch = x_batch.to(self.device)
+                            y_batch = y_batch.to(self.device)
+
+                            pbar.set_description("\033[36mTesting\033[0m - Epochs: {:03d}/{:03d}".format(epoch + 1, epochs))
                             pbar.update(b_size)
-                            test_outputs = self.model_narx(x_test_narx)
-                            # test_loss = self.criterion_ni(test_outputs, y_test)
-                            # _, test_predicted = torch.max(test_outputs, 1)
-                            # test_correct += (test_predicted.to(self.device) == y_test.to(self.device)).sum().float().item()
-                            # running_corrects += torch.sum(test_predicted == y_test).float().item()
-                            #
-                            # self.experiment.log_metric("loss", test_loss, step=epoch)
-                            # self.experiment.log_metric("accuracy", float(running_corrects / test_total))
+
+                            outputs = self.model_narx(x_batch)
+                            test_loss = self.criterion_narx(outputs, y_batch.unsqueeze(1))
+
+                            threshold = 0.1
+                            test_correct += ((outputs - y_batch.unsqueeze(1)).abs() < threshold).sum().float().item()
+
+                            self.experiment.log_metric("test_loss", test_loss.item(), step=epoch)
+                            self.experiment.log_metric("test_accuracy", float(test_correct / total_test_samples), step=epoch)
+                    pbar.close()
 
 
-                            # Predicciones continuas
-                            test_predicted = test_outputs
-                            # Comparar las predicciones con las etiquetas reales usando una métrica de error
-                            test_loss = torch.nn.functional.mse_loss(test_predicted, y_test_narx.to(self.device))
-                            # Si quieres llevar un conteo de cuántas predicciones están cerca del valor real (por ejemplo, dentro de un umbral)
-                            threshold = 0.1  # Definir un umbral de tolerancia para considerarlo "correcto"
-                            test_correct += ((test_predicted - y_test_narx.to(self.device)).abs() < threshold).sum().float().item()
-
-                            self.experiment.log_metric("loss", test_loss.item(), step=epoch)
-                            self.experiment.log_metric("accuracy", float(test_correct / total_samples), step=epoch)
 
 
-                            # self.experiment.log_metric("predicted_soh", test_outputs.item(), step=epoch)
-                            # self.experiment.log_metric("current_soh", x_test.item(), step=epoch)
-                        pbar.close()
-                        # acc = self.experiment.get_metric("accuracy")
-
-            pbar.close()
 
 
-    def fit_NARX_Transformer_finetuning(self, epoch, optimizer, modelo, x_train, y_train, x_val, y_val, x_test, y_test, loader: Dict[str, DataLoader], epochs: int, checkpoint_path: str = None, validation: bool = True, test: bool = True) -> None:
-        # Loss function and optimizer
-        """
-        | The method of training your PyTorch Model.
-        | With the assumption, This method use for training network for classification.
-
-        ::
-
-            train_ds = Subset(train_val_ds, train_index)
-            val_ds = Subset(train_val_ds, val_index)
-
-            train_val_loader = {
-                "train": DataLoader(train_ds, batch_size),
-                "val": DataLoader(val_ds, batch_size)
-            }
-
-            clf = NeuralNetworkClassifier(
-                    Network(), nn.CrossEntropyLoss(),
-                    optim.Adam, optimizer_config, experiment
-                )
-            clf.fit(train_val_loader, epochs=10)
-
-
-        :param loader: Dictionary which contains Data Loaders for training and validation.: dict{DataLoader, DataLoader}
-        :param epochs: The number of epochs: int
-        :param checkpoint_path: str
-        :param validation:
-        :return: None
-        """
-        self.optimizer_narx = optimizer
-        self._start_epoch = epoch
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer_narx, T_max=50, eta_min=1e-6)
+    def fit_NARX_Transformer(self, x_train, y_train, x_val, y_val, x_test, y_test, loader: Dict[str, DataLoader], epochs: int, checkpoint_path: str = None, validation: bool = True, test: bool = True) -> None:
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer_narx, T_max=epochs, eta_min=1e-6)
         len_of_train_dataset = len(loader["train_narx"].dataset)
         epochs = epochs + self._start_epoch
-        self.modelo = modelo.to(self.device)
+
         self.hyper_params["epochs"] = epochs
         self.hyper_params["batch_size"] = loader["train_narx"].batch_size
         self.hyper_params["train_ds_size"] = len_of_train_dataset
 
         if validation:
-            len_of_val_dataset = len(loader["val_narx"].dataset)
-            self.hyper_params["val_ds_size"] = len_of_val_dataset
+            self.hyper_params["val_ds_size"] = len(loader["val_narx"].dataset)
 
         if test:
-            len_of_test_dataset = len(loader["test_narx"].dataset)
-            self.hyper_params["test_ds_size"] = len_of_test_dataset
+            self.hyper_params["test_ds_size"] = len(loader["test_narx"].dataset)
 
         self.experiment.log_parameters(self.hyper_params)
 
         for epoch in range(self._start_epoch, epochs):
-            self.epoch = epoch
-            total_samples = 0
             if checkpoint_path is not None and epoch % 100 == 0:
                 self.save_to_file_normal_improve(checkpoint_path)
+
             with self.experiment.train():
                 train_correct = 0.0
                 total_loss = 0.0
                 total_samples = 0.0
 
-                self.modelo.train()
+                self.model_narx.train()
                 pbar = tqdm(total=len_of_train_dataset)
-                # for data in loader["train_narx"]:
-                #     print(data)
-                #     break  # Para ver solo el primer lote
-                for x_train_narx, cap_train, y_train_narx in loader["train_narx"]:
-                    b_size = y_train_narx.shape[0]
-                    total_samples += y_train_narx.shape[0]
-                    x_train_narx = x_train_narx.to(self.device)  # (batch_size, 2, 400, 3)
-                    cap_train = cap_train.to(self.device)  # (batch_size, 1)
-                    y_train_narx = y_train_narx.to(self.device)    # (batch_size)
+                for x_batch, y_batch in loader["train_narx"]:
+                    b_size = y_batch.shape[0]
+                    total_samples += b_size
 
-                    pbar.set_description("\033[36m" + "Training" + "\033[0m" + " - Epochs: {:03d}/{:03d}".format(epoch+1, epochs))
+                    x_batch = x_batch.to(self.device)
+                    y_batch = y_batch.to(self.device)
+
+                    pbar.set_description("\033[36mTraining\033[0m - Epochs: {:03d}/{:03d}".format(epoch + 1, epochs))
                     pbar.update(b_size)
+
                     self.optimizer_narx.zero_grad()
-                    train_output = self.modelo(x_train_narx, cap_train)
-                    train_loss = self.criterion_narx(train_output, y_train_narx.unsqueeze(1))
-                    train_loss.backward()
-                    torch.nn.utils.clip_grad_norm_(self.modelo.parameters(), max_norm=1.0)
+                    outputs = self.model_narx(x_batch)
+                    loss = self.criterion_narx(outputs, y_batch.unsqueeze(1))
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model_narx.parameters(), max_norm=1.0)
                     self.optimizer_narx.step()
-                    # _, train_pred = torch.max(train_output, 1)
-                    # #val_correct += (val_pred == y_val).sum().float().item()
-                    # train_correct += (train_pred.to(self.device) == y_train.to(self.device)).sum().float().item()
 
-                    # Predicciones continuas
-                    train_pred = train_output
-
-                    # Comparar las predicciones con las etiquetas reales usando una métrica de error
-                    #train_loss = torch.nn.functional.mse_loss(train_pred, y_train.to(self.device))
-                    # train_loss = torch.nn.functional.mse_loss(train_pred, y_train.unsqueeze(1).to(self.device))
-
-
-                    # Si quieres llevar un conteo de cuántas predicciones están cerca del valor real (por ejemplo, dentro de un umbral)
-                    threshold = 0.1  # Definir un umbral de tolerancia para considerarlo "correcto"
-                    correct_preds = ((train_pred - y_train.to(self.device)).abs() < threshold).sum().float().item()
+                    threshold = 0.1
+                    correct_preds = ((outputs - y_batch.unsqueeze(1)).abs() < threshold).sum().float().item()
                     train_correct += correct_preds
 
-                    total_samples = 24950
-                    self.experiment.log_metric("loss", train_loss.item(), step=epoch)
+                    self.experiment.log_metric("loss", loss.item(), step=epoch)
                     self.experiment.log_metric("accuracy", float(train_correct / total_samples), step=epoch)
+                    total_loss += loss.item()
+                pbar.close()
 
-                    # Actualizar métricas
-                    total_loss += train_loss.item()
-                    avg_loss = total_loss / total_samples
-
-                    # Registrar métricas en Comet o donde sea necesario
-                    #self.experiment.log_metric("loss", avg_loss.item(), step=epoch)
-                    #self.experiment.log_metric("loss", float(avg_loss), step=epoch)
-                    # self.experiment.log_metric("avg_loss", avg_loss, step=epoch)
-
-                    # Registrar distancia media entre pares (métrica clave en aprendizaje siamés)
-                    #avg_distance = torch.nn.functional.pairwise_distance(emb1, emb2).mean().item()
-                    # self.experiment.log_metric("avg_embedding_distance", avg_distance, step=epoch)
             if validation:
-                len_of_val_dataset = len(loader["val_narx"].dataset)
                 with self.experiment.validate():
+                    self.model_narx.eval()
+                    val_correct = 0.0
+                    val_total = 0.0
+                    pbar = tqdm(total=len(loader["val_narx"].dataset))
                     with torch.no_grad():
-                        val_correct = 0.0
-                        val_total = 0.0
+                        for x_batch, y_batch in loader["val_narx"]:
+                            b_size = y_batch.shape[0]
+                            val_total += b_size
 
-                        self.modelo.eval()
-                        pbar = tqdm(total=len_of_val_dataset)
-                        for x_val_narx, cap_val, y_val_narx in loader["val_narx"]:
-                            b_size = y_val_narx.shape[0]
-                            val_total += y_val_narx.shape[0]
-                            x_val_narx = x_val_narx.to(self.device) if isinstance(x_val_narx, torch.Tensor) else [i_val.to(self.device) for i_val in x_val_narx]
-                            y_val_narx = y_val_narx.to(self.device)
-                            cap_val = cap_val.to(self.device)
+                            x_batch = x_batch.to(self.device)
+                            y_batch = y_batch.to(self.device)
 
-                            pbar.set_description(
-                                "\033[36m" + "Validating" + "\033[0m" + " - Epochs: {:03d}/{:03d}".format(epoch+1, epochs)
-                            )
+                            pbar.set_description("\033[36mValidating\033[0m - Epochs: {:03d}/{:03d}".format(epoch + 1, epochs))
                             pbar.update(b_size)
 
-                            val_output = self.modelo(x_val_narx, cap_val)
-                            val_loss = self.criterion_narx(val_output, y_val_narx)
-                            _, val_pred = torch.max(val_output, 1)
-                            val_correct += (val_pred == y_val_narx).sum().float().item()
+                            outputs = self.model_narx(x_batch)
+                            val_loss = self.criterion_narx(outputs, y_batch.unsqueeze(1))
 
-                            # self.experiment.log_metric("loss", val_loss.item(), step=epoch)
-                            # self.experiment.log_metric("accuracy", float(val_correct / val_total), step=epoch)
-            # Paso del scheduler después de cada epoch
+                            threshold = 0.1
+                            val_correct += ((outputs - y_batch.unsqueeze(1)).abs() < threshold).sum().float().item()
+
+                            self.experiment.log_metric("val_loss", val_loss.item(), step=epoch)
+                            self.experiment.log_metric("val_accuracy", float(val_correct / val_total), step=epoch)
+                    pbar.close()
+
             scheduler.step()
-            # Mostrar el learning rate actual
-            print(f'Epoch [{epoch+1}/{epochs}], Learning Rate: {scheduler.get_last_lr()[0]}')
+            print(f"Epoch [{epoch + 1}/{epochs}], Learning Rate: {scheduler.get_last_lr()[0]}")
 
             if test:
-                len_of_test_dataset = len(loader["test_narx"].dataset)
                 with self.experiment.test():
-                    running_loss = 0.0
-                    running_corrects = 0.0
+                    self.model_narx.eval()
+                    test_correct = 0.0
+                    test_total = 0.0
+                    pbar = tqdm(total=len(loader["test_narx"].dataset))
                     with torch.no_grad():
-                        test_correct = 0.0
-                        test_total = 0.0
-                        self.modelo.eval()
-                        pbar = tqdm(total=len_of_test_dataset)
-                        for x_test_narx, cap_test, y_test_narx  in loader["test_narx"]:
-                            b_size = y_test_narx.shape[0]
-                            test_total += y_test_narx.shape[0]
-                            x_test_narx = x_test_narx.to(self.device) if isinstance(x_test_narx, torch.Tensor) else [i_val.to(self.device) for i_val in x_test_narx]
-                            y_test_narx = y_test_narx.to(self.device)
-                            cap_test = cap_test.to(self.device)
-                            # x=y[0]
-                            # y=y[1]
-                            # #x = x.to(self.device) if isinstance(x, torch.Tensor) else [i.to(self.device) for i in x]
-                            # y = y.to(self.device)
+                        for x_batch, y_batch in loader["test_narx"]:
+                            b_size = y_batch.shape[0]
+                            test_total += b_size
 
-                            pbar.set_description(
-                                "\033[36m" + "Testing" + "\033[0m" + " - Epochs: {:03d}/{:03d}".format(epoch+1, epochs)
-                            )
+                            x_batch = x_batch.to(self.device)
+                            y_batch = y_batch.to(self.device)
+
+                            pbar.set_description("\033[36mTesting\033[0m - Epochs: {:03d}/{:03d}".format(epoch + 1, epochs))
                             pbar.update(b_size)
-                            test_outputs = self.modelo(x_test_narx, cap_test)
-                            # test_loss = self.criterion_ni(test_outputs, y_test)
-                            # _, test_predicted = torch.max(test_outputs, 1)
-                            # test_correct += (test_predicted.to(self.device) == y_test.to(self.device)).sum().float().item()
-                            # running_corrects += torch.sum(test_predicted == y_test).float().item()
-                            #
-                            # self.experiment.log_metric("loss", test_loss, step=epoch)
-                            # self.experiment.log_metric("accuracy", float(running_corrects / test_total))
 
+                            outputs = self.model_narx(x_batch)
+                            test_loss = self.criterion_narx(outputs, y_batch.unsqueeze(1))
 
-                            # Predicciones continuas
-                            test_predicted = test_outputs
-                            # Comparar las predicciones con las etiquetas reales usando una métrica de error
-                            test_loss = torch.nn.functional.mse_loss(test_predicted, y_test_narx.to(self.device))
-                            # Si quieres llevar un conteo de cuántas predicciones están cerca del valor real (por ejemplo, dentro de un umbral)
-                            threshold = 0.1  # Definir un umbral de tolerancia para considerarlo "correcto"
-                            test_correct += ((test_predicted - y_test_narx.to(self.device)).abs() < threshold).sum().float().item()
+                            threshold = 0.1
+                            test_correct += ((outputs - y_batch.unsqueeze(1)).abs() < threshold).sum().float().item()
 
-                            self.experiment.log_metric("loss", test_loss.item(), step=epoch)
-                            self.experiment.log_metric("accuracy", float(test_correct / total_samples), step=epoch)
-
-
-                            # self.experiment.log_metric("predicted_soh", test_outputs.item(), step=epoch)
-                            # self.experiment.log_metric("current_soh", x_test.item(), step=epoch)
-                        pbar.close()
-                        # acc = self.experiment.get_metric("accuracy")
-
-            pbar.close()
-
+                            self.experiment.log_metric("test_loss", test_loss.item(), step=epoch)
+                            self.experiment.log_metric("test_accuracy", float(test_correct / test_total), step=epoch)
+                    pbar.close()
 
 
 

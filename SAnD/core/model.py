@@ -228,69 +228,127 @@ class NARX_Transformer_2var_SoloActual(nn.Module):
         self.num_cycles = num_cycles
         self.num_preds = num_preds
 
-        # Encoder CNN
+        # Encoder CNN con LayerNorm y GELU
         self.conv_layer = nn.Sequential(
             nn.Conv1d(in_channels=2, out_channels=feature_dim1, kernel_size=5, padding=2),
-            nn.ReLU(),
+            nn.LayerNorm([feature_dim1, 400]),
+            nn.GELU(),
             nn.Conv1d(in_channels=feature_dim1, out_channels=feature_dim2, kernel_size=5, padding=2),
-            nn.ReLU(),
+            nn.LayerNorm([feature_dim2, 400]),
+            nn.GELU()
         )
 
-        # Transformer Encoder
+        # Transformer encoder
         self.encoder_layer = nn.TransformerEncoderLayer(
             d_model=feature_dim2,
             nhead=num_attention,
             batch_first=True,
-            dim_feedforward=feature_dim2 * 4,
-            dropout=0.1
+            dim_feedforward=feature_dim2 * 2,
+            dropout=0.2,
+            activation='gelu'
         )
 
-        # Head final para predicción
+        # Normalización y head final
+        self.norm = nn.LayerNorm(2 * feature_dim2)
         self.fc = nn.Sequential(
+            nn.Linear(2 * feature_dim2, feature_dim2),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(feature_dim2, 1)
+        )
+
+    def forward(self, my_data):
+        # my_data: (batch, 400, 2)
+        current_cycle = my_data.permute(0, 2, 1)  # (batch, 2, 400)
+        embedded_data = self.conv_layer(current_cycle)  # (batch, feature_dim2, 400)
+        embedded_data = embedded_data.permute(0, 2, 1)  # (batch, 400, feature_dim2)
+        encoded_data = self.encoder_layer(embedded_data)  # (batch, 400, feature_dim2)
+
+        mean_pool = torch.mean(encoded_data, dim=1)  # (batch, feature_dim2)
+        max_pool, _ = torch.max(encoded_data, dim=1)  # (batch, feature_dim2)
+        pooled = torch.cat([mean_pool, max_pool], dim=1)  # (batch, 2 * feature_dim2)
+
+        pooled = self.norm(pooled)  # Normalize concatenated features
+        output = self.fc(pooled)  # (batch, 1)
+        return output
+
+    def pred_sequence(self, my_data):
+        preds = []
+        for cycle in range(my_data.size(1) - self.num_cycles + 1):
+            pred = self.forward(my_data[:, cycle:cycle+self.num_cycles])
+            preds.append(pred)
+        return torch.cat(preds, dim=1)
+
+
+#
+## ###########################################################################################
+# ##################   NARX para 3 variables (V, I, Tª)
+# ##########################################################################################
+class NARX_Transformer_3var_SoloActual(nn.Module):
+    def __init__(self, feature_dim1, feature_dim2, num_attention, num_cycles, num_preds):
+        super(NARX_Transformer_3var_SoloActual, self).__init__()
+        self.num_cycles = num_cycles
+        self.num_preds = num_preds
+
+        # Encoder CNN para 3 variables (V, I, T)
+        self.conv_layer = nn.Sequential(
+            nn.Conv1d(in_channels=3, out_channels=feature_dim1, kernel_size=5, padding=2),
+            nn.LayerNorm([feature_dim1, 400]),
+            nn.GELU(),
+            nn.Conv1d(in_channels=feature_dim1, out_channels=feature_dim2, kernel_size=5, padding=2),
+            nn.LayerNorm([feature_dim2, 400]),
+            nn.GELU()
+        )
+
+        # Transformer encoder con varias capas
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=feature_dim2,
+            nhead=num_attention,
+            batch_first=True,
+            dim_feedforward=feature_dim2 * 2,
+            dropout=0.2,
+            activation='gelu'
+        )
+        self.encoder_layer = nn.TransformerEncoder(encoder_layer, num_layers=2)
+
+        # LayerNorm + MLP Head más profundo
+        self.norm = nn.LayerNorm(2 * feature_dim2)
+        self.fc = nn.Sequential(
+            nn.Linear(2 * feature_dim2, feature_dim2),
+            nn.GELU(),
+            nn.Dropout(0.1),
             nn.Linear(feature_dim2, feature_dim2 // 2),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(feature_dim2 // 2, 1)
         )
 
     def forward(self, my_data):
-        # my_data tiene forma (batch, 400, 2)
-        current_cycle = my_data.permute(0, 2, 1)  # (batch, 2, 400)
-
+        # my_data: (batch, 400, 3)
+        current_cycle = my_data.permute(0, 2, 1)  # (batch, 3, 400)
         embedded_data = self.conv_layer(current_cycle)  # (batch, feature_dim2, 400)
-
         embedded_data = embedded_data.permute(0, 2, 1)  # (batch, 400, feature_dim2)
-
         encoded_data = self.encoder_layer(embedded_data)  # (batch, 400, feature_dim2)
 
-        pooled = torch.mean(encoded_data, dim=1)  # (batch, feature_dim2)
-
-        output_cap = self.fc(pooled)  # (batch, 1)
-
-        return output_cap
+        mean_pool = torch.mean(encoded_data, dim=1)
+        max_pool, _ = torch.max(encoded_data, dim=1)
+        pooled = torch.cat([mean_pool, max_pool], dim=1)
+        pooled = self.norm(pooled)
+        output = self.fc(pooled)
+        return output
 
     def pred_sequence(self, my_data):
-        """
-        Inferencia secuencial.
-        Asume que my_data tiene forma (batch, total_ciclos, 400, 2)
-        """
         preds = []
-
-        total_ciclos = my_data.size(1)
-
-        for cycle in range(total_ciclos):
-            current_cycle = my_data[:, cycle, :, :]  # (batch, 400, 2)
-
-            pred = self.forward(current_cycle)  # (batch, 1)
+        for cycle in range(my_data.size(1) - self.num_cycles + 1):
+            pred = self.forward(my_data[:, cycle:cycle+self.num_cycles])
             preds.append(pred)
-
-        preds = torch.cat(preds, dim=1)  # (batch, total_ciclos)
-
-        return preds
+        return torch.cat(preds, dim=1)
 
 
 
-#
-#
+
+
+
+
 #
 # ###########################################################################################
 # ##################   NARX para 3 variables (V, I, Tª)
