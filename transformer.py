@@ -352,7 +352,7 @@ clf = NeuralNetworkClassifier(
     nn.MSELoss(),
     nn.MSELoss(),
     #nn.L1Loss(),
-    nn.SmoothL1Loss(beta=0.1),  # Cambiar a SmoothL1Loss,
+    nn.SmoothL1Loss(beta=0.5),  # Cambiar a SmoothL1Loss,
     optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
     # optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.96), "eps": 1e-08, "weight_decay": 1e-6},
     # optim.SGD, optimizer_config={"lr":1e-6, "momentum": 0.9,"weight_decay": 1e-4},
@@ -369,7 +369,7 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = False
+inference = True
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -456,7 +456,7 @@ if train == True:
                     {"train_narx": train_loader,
                 "val_narx": val_loader,
                 "test_narx": test_loader},
-                epochs=1000
+                epochs=200
         )
 
 
@@ -490,7 +490,7 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_1ciclo.pth"
+    modelo ="save_params/trained_model_narx_2var_1ciclo_ok_ok.pth"
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
     #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
