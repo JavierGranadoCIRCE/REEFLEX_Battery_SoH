@@ -456,7 +456,7 @@ if train == True:
                     {"train_narx": train_loader,
                 "val_narx": val_loader,
                 "test_narx": test_loader},
-                epochs=300
+                epochs=1000
         )
 
 
