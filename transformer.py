@@ -369,7 +369,7 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = True
+inference = False
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -379,7 +379,7 @@ if inference == True:
     train = False
 elif inference == False:
     train = True
-    finetuning = False
+    finetuning = True
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     import gc
@@ -405,21 +405,21 @@ if export_csv == True:
 if train == True:
 
     if finetuning == True:
-        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer,"save_params/trained_model_narx_2var_tripletes_random.pth")
+        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
         modelo = modelo.to(device)
         epoch = checkpoint['epoch']
         optimizer = torch.optim.Adam(modelo.parameters())  # Usando el lr guardado
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        clf.fit_NARX_Transformer_finetuning(epoch, optimizer, modelo, x_pairs_fixed_train, y_targets_fixed_train, x_pairs_fixed_val, y_targets_fixed_val, x_pairs_fixed_test, y_targets_fixed_test,
-                                 {"train_narx": fixed_train_loader,
-                                  "val_narx": fixed_val_loader,
-                                  "test_narx": fixed_test_loader},
-                                 epochs=1000
+        clf.fit_NARX_Transformer_finetuning(epoch, optimizer, modelo, x_train, y_train, x_val, y_val, x_test, y_test,
+                                 {"train_narx": train_loader,
+                                  "val_narx": val_loader,
+                                  "test_narx": test_loader},
+                                 epochs=2
                                  )
         # ##################################################################################################
         # # # save pth model when finetuning process is completed
         # #############################################################################################
-        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_1ciclo.pth")
+        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_1ciclo_finetuning.pth")
         #############################################################################################
 
     elif finetuning == False:
@@ -490,7 +490,7 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_1ciclo.pth"
+    modelo ="save_params/trained_model_narx_2var_1ciclo_finetuning.pth"
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
     #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)

@@ -103,6 +103,7 @@ class NeuralNetworkClassifier:
     """
 
     def __init__(self, model_s, model_n, model_ni, model_narx, criterion_s, criterion_n, criterion_ni, criterion_narx, optimizer, optimizer_config: dict, experiment) -> None:
+        self.epoch = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         #self.device = torch.device("cpu")
         # Si es 'cuda', entonces el entrenamiento se ejecutará en la GPU
@@ -876,44 +877,43 @@ class NeuralNetworkClassifier:
 
 
     #
-    # def fit_NARX_Transformer_finetuning(self, epoch, optimizer, modelo,
-    #                                     x_pairs_fixed_train, y_targets_fixed_train,
-    #                                     x_pairs_fixed_val, y_targets_fixed_val,
-    #                                     x_pairs_fixed_test, y_targets_fixed_test,
-    #                                     loader: Dict[str, DataLoader],
-    #                                     epochs: int) -> None:
-    #     self.optimizer_narx = optimizer
-    #     self._start_epoch = epoch
-    #     self.modelo = modelo.to(self.device)
-    #     criterion = self.criterion_narx
-    #
-    #     for epoch in range(self._start_epoch, self._start_epoch + epochs):
-    #         self.modelo.train()
-    #         total_loss = 0.0
-    #         pbar = tqdm(loader["train_narx"], desc=f"Epoch {epoch+1}/{self._start_epoch + epochs}")
-    #
-    #         for x_batch, cap_batch, y_batch in pbar:
-    #             x_batch = x_batch.to(self.device)
-    #             cap_batch = cap_batch.to(self.device)
-    #             y_batch = y_batch.to(self.device).unsqueeze(1)
-    #
-    #             self.optimizer_narx.zero_grad()
-    #             outputs = self.modelo(x_batch, cap_batch)
-    #             loss = criterion(outputs, y_batch)
-    #             loss.backward()
-    #             self.optimizer_narx.step()
-    #
-    #             total_loss += loss.item()
-    #             pbar.set_postfix(loss=loss.item())
-    #
-    #         # Guardar modelo tras cada epoch
-    #         torch.save({
-    #             'epoch': epoch + 1,
-    #             'model_state_dict': self.modelo.state_dict(),
-    #             'optimizer_state_dict': self.optimizer_narx.state_dict()
-    #         }, "save_params/trained_model_narx_2var.pth")
-    #
-    #     print("Fine-tuning finalizado y modelo guardado.")
+    def fit_NARX_Transformer_finetuning(self, epoch, optimizer, modelo,
+                                        x_pairs_fixed_train, y_targets_fixed_train,
+                                        x_pairs_fixed_val, y_targets_fixed_val,
+                                        x_pairs_fixed_test, y_targets_fixed_test,
+                                        loader: Dict[str, DataLoader],
+                                        epochs: int) -> None:
+        self.optimizer_narx = optimizer
+        self._start_epoch = epoch
+        self.modelo = modelo.to(self.device)
+        criterion = self.criterion_narx
+
+        for epoch in range(self._start_epoch, self._start_epoch + epochs):
+            self.modelo.train()
+            total_loss = 0.0
+            pbar = tqdm(loader["train_narx"], desc=f"Epoch {epoch+1}/{self._start_epoch + epochs}")
+
+            for x_batch, y_batch in pbar:
+                x_batch = x_batch.to(self.device)
+                y_batch = y_batch.to(self.device).unsqueeze(1)
+
+                self.optimizer_narx.zero_grad()
+                outputs = self.modelo(x_batch)
+                loss = criterion(outputs, y_batch)
+                loss.backward()
+                self.optimizer_narx.step()
+
+                total_loss += loss.item()
+                pbar.set_postfix(loss=loss.item())
+
+            # Guardar modelo tras cada epoch
+            torch.save({
+                'epoch': epoch + 1,
+                'model_state_dict': self.modelo.state_dict(),
+                'optimizer_state_dict': self.optimizer_narx.state_dict()
+            }, "save_params/trained_model_narx_2var.pth")
+
+        print("Fine-tuning finalizado y modelo guardado.")
 
 
     def evaluate(self, loader: DataLoader, verbose: bool = False) -> None or float:
@@ -1330,7 +1330,7 @@ class NeuralNetworkClassifier:
         full_path = os.path.join(path, file_name)
 
         torch.save({
-            'epoch': self.epoch + 1,
+            'epoch': self.epoch,
             'model_state_dict': self.modelo.state_dict(),
             'optimizer_state_dict': self.optimizer_narx.state_dict()
         }, full_path)
