@@ -1306,7 +1306,7 @@ class NeuralNetworkClassifier:
         # file_name = "model_params-epochs_{}-{}.pth".format(
         #     self.hyper_params["epochs"], time.ctime().replace(" ", "_")
         # )
-        file_name = "trained_model_narx_2var_1ciclo.pth"
+        file_name = "trained_model_narx_3var_1ciclo.pth"
         path = path + file_name
 
         checkpoints = self.save_checkpoint_narx()

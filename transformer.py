@@ -264,7 +264,7 @@ fixed_val_loader = DataLoader(fixed_val_ds, batch_size=32, shuffle=False)
 
 
 # Dividir en train, val y test (estratificado si `labels` tiene clases desbalanceadas)
-data = data[:, :, :2]  # -> ahora (num_samples, 400, 2)
+#data = data[:, :, :2]  # -> ahora (num_samples, 400, 2)
 
 # Normalización canal a canal (por media y std global)
 
@@ -346,14 +346,14 @@ clf = NeuralNetworkClassifier(
     SiameseSAnD(SAnD_Embedding(in_feature, seq_len, n_heads, factor, num_class, num_layers)),
     SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers),
     SAnDImprove(in_feature, seq_len, n_heads, factor, num_class, num_layers),
-    NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
-    #NARX_Transformer_3var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
+    #NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
+    NARX_Transformer_3var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds),
     ContrastiveLoss(),
     nn.MSELoss(),
     nn.MSELoss(),
     #nn.L1Loss(),
-    nn.SmoothL1Loss(beta=0.7),  # Cambiar a SmoothL1Loss,
-    optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
+    nn.SmoothL1Loss(beta=0.3),  # Cambiar a SmoothL1Loss,
+    optim.AdamW,optimizer_config={"lr": 1e-5, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
     # optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.96), "eps": 1e-08, "weight_decay": 1e-6},
     # optim.SGD, optimizer_config={"lr":1e-6, "momentum": 0.9,"weight_decay": 1e-4},
     #experiment=Experiment("8mKGHiYeg2P7dZEFlvQv3PEzc")
@@ -369,7 +369,7 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = False
+inference = True
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -379,7 +379,7 @@ if inference == True:
     train = False
 elif inference == False:
     train = True
-    finetuning = True
+    finetuning = False
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     import gc
@@ -452,20 +452,20 @@ if train == True:
         x_val = x_val.unsqueeze(1)
         x_test = x_test.unsqueeze(1)
         #
-        clf.fit_NARX_Transformer(x_train, y_train, x_val, y_val, x_test, y_test,
-                    {"train_narx": train_loader,
-                "val_narx": val_loader,
-                "test_narx": test_loader},
-                epochs=1000
-        )
-
-
-        # clf.fit_NARX_Transformer3V(x_train, y_train, x_val, y_val, x_test, y_test,
-        #              {"train_narx": train_loader,
-        #               "val_narx": val_loader,
-        #               "test_narx": test_loader},
-        #              epochs=200
+        # clf.fit_NARX_Transformer(x_train, y_train, x_val, y_val, x_test, y_test,
+        #             {"train_narx": train_loader,
+        #         "val_narx": val_loader,
+        #         "test_narx": test_loader},
+        #         epochs=1000
         # )
+
+
+        clf.fit_NARX_Transformer3V(x_train, y_train, x_val, y_val, x_test, y_test,
+                     {"train_narx": train_loader,
+                      "val_narx": val_loader,
+                      "test_narx": test_loader},
+                     epochs=100
+        )
 
 
 
@@ -490,7 +490,7 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_1ciclo_finetuning.pth"
+    modelo ="save_params/trained_model_narx_3var_1ciclo.pth"
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
     #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)

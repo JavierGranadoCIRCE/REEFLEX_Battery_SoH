@@ -211,8 +211,8 @@ class Inference_SoH_Normal_Improve:
 class Inference_SoH_NARX:
     def __init__(self, model_path, input_features, seq_len, n_heads, num_cycles, num_preds, device="cuda"):
         self.device = device
-        #self.sand_model = NARX_Transformer_3var_SoloActual(input_features, seq_len, n_heads, num_cycles, num_preds)
-        self.sand_model = NARX_Transformer_2var_SoloActual(input_features, seq_len, n_heads, num_cycles, num_preds)
+        self.sand_model = NARX_Transformer_3var_SoloActual(input_features, seq_len, n_heads, num_cycles, num_preds)
+        #self.sand_model = NARX_Transformer_2var_SoloActual(input_features, seq_len, n_heads, num_cycles, num_preds)
         #self.sand_model = NARX_Transformer_2var(input_features, seq_len, n_heads, num_cycles, num_preds)
         #self.sand_model = NARX_Transformer(input_features, seq_len, n_heads, num_cycles, num_preds)
 
