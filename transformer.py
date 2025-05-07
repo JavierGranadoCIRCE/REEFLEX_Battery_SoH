@@ -369,7 +369,7 @@ clf = NeuralNetworkClassifier(
 # count_parameters(model)
 #########################################################
 
-inference = False
+inference = True
 if inference == True:
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -490,7 +490,7 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_1ciclo_finetuning.pth"
+    modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
     #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
