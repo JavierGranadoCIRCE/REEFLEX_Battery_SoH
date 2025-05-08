@@ -352,8 +352,8 @@ clf = NeuralNetworkClassifier(
     nn.MSELoss(),
     nn.MSELoss(),
     #nn.L1Loss(),
-    nn.SmoothL1Loss(beta=0.3),  # Cambiar a SmoothL1Loss,
-    optim.AdamW,optimizer_config={"lr": 1e-5, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
+    nn.SmoothL1Loss(beta=0.1),  # Cambiar a SmoothL1Loss,
+    optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
     # optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.96), "eps": 1e-08, "weight_decay": 1e-6},
     # optim.SGD, optimizer_config={"lr":1e-6, "momentum": 0.9,"weight_decay": 1e-4},
     #experiment=Experiment("8mKGHiYeg2P7dZEFlvQv3PEzc")
@@ -405,7 +405,7 @@ if export_csv == True:
 if train == True:
 
     if finetuning == True:
-        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
+        modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_3var_SoloActual,"save_params/trained_model_narx_3var_1ciclo.pth")
         modelo = modelo.to(device)
         epoch = checkpoint['epoch']
         optimizer = torch.optim.Adam(modelo.parameters())  # Usando el lr guardado
@@ -414,12 +414,12 @@ if train == True:
                                  {"train_narx": train_loader,
                                   "val_narx": val_loader,
                                   "test_narx": test_loader},
-                                 epochs=2
+                                 epochs=100
                                  )
         # ##################################################################################################
         # # # save pth model when finetuning process is completed
         # #############################################################################################
-        clf.save_to_file_Narx_finetuning("trained_model_narx_2var_1ciclo_finetuning.pth")
+        clf.save_to_file_Narx_finetuning("trained_model_narx_3var_1ciclo_finetuning.pth")
         #############################################################################################
 
     elif finetuning == False:
@@ -464,7 +464,7 @@ if train == True:
                      {"train_narx": train_loader,
                       "val_narx": val_loader,
                       "test_narx": test_loader},
-                     epochs=100
+                     epochs=300
         )
 
 

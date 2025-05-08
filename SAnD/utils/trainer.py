@@ -911,7 +911,7 @@ class NeuralNetworkClassifier:
                 'epoch': epoch + 1,
                 'model_state_dict': self.modelo.state_dict(),
                 'optimizer_state_dict': self.optimizer_narx.state_dict()
-            }, "save_params/trained_model_narx_2var.pth")
+            }, "save_params/trained_model_narx_3var_1ciclo_finetuning.pth")
 
         print("Fine-tuning finalizado y modelo guardado.")
 
