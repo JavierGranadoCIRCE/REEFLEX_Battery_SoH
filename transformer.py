@@ -353,7 +353,7 @@ clf = NeuralNetworkClassifier(
     nn.MSELoss(),
     #nn.L1Loss(),
     nn.SmoothL1Loss(beta=0.1),  # Cambiar a SmoothL1Loss,
-    optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
+    optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
     # optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.96), "eps": 1e-08, "weight_decay": 1e-6},
     # optim.SGD, optimizer_config={"lr":1e-6, "momentum": 0.9,"weight_decay": 1e-4},
     #experiment=Experiment("8mKGHiYeg2P7dZEFlvQv3PEzc")
@@ -464,7 +464,7 @@ if train == True:
                      {"train_narx": train_loader,
                       "val_narx": val_loader,
                       "test_narx": test_loader},
-                     epochs=300
+                     epochs=600
         )
 
 
