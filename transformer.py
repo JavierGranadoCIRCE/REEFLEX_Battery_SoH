@@ -281,6 +281,11 @@ torch.save({'mean': means, 'std': stds}, 'save_params/normalization_stats.pt')
 x_train, x_temp, y_train, y_temp = train_test_split(data, labels, test_size=0.2, random_state=42, shuffle=False)
 x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42, shuffle=False)
 
+data = data.clone().detach().float()
+label = labels.clone().detach().float()
+data_ds = TensorDataset(data, label)
+data_loader = DataLoader(data_ds, batch_size=32, shuffle=False)
+
 x_train = x_train.clone().detach().float()
 x_val = x_val.clone().detach().float()
 x_test = x_test.clone().detach().float()
@@ -378,8 +383,8 @@ if inference == True:
     torch.cuda.empty_cache()
     train = False
 elif inference == False:
-    train = True
-    finetuning = True
+    train = False
+    finetuning = False
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     import gc
@@ -393,7 +398,10 @@ export_csv = False
 if export_csv == True:
     inference = False
     train = False
-    save_example_to_csv_narx(x_test_narx, cap_test, y_test_narx, 249, filename="save_params/ciclo_de_carga_narx_250.csv")
+    x_train = x_train.unsqueeze(1)
+    x_val = x_val.unsqueeze(1)
+    x_test = x_test.unsqueeze(1)
+    save_example_to_csv_narx(x_test, y_test, 0, filename="save_params/ciclo_de_carga_narx_2var_1ciclo_1.csv")
 ################################################################################
 
 

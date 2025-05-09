@@ -169,30 +169,29 @@ def save_example_to_csv(x_train, y_train, example_idx, filename="ciclo_de_carga.
 
 
 
-def save_example_to_csv_narx(x_pair, cap_input, y_target, example_idx, filename="ciclo_de_carga.csv"):
+def save_example_to_csv_narx(x_pair, y_target, example_idx, filename="ciclo_de_carga.csv"):
     """
-    Guarda un ejemplo de entrada (x_pair + cap_input) y su etiqueta (y_target) en un CSV.
+    Guarda un ejemplo de entrada (x_pair) y su etiqueta (y_target) en un CSV.
 
-    - x_pair: Tensor con forma (N, 2, 400, 3)
-    - cap_input: Tensor con forma (N, 1)
+    - x_pair: Tensor con forma (N, 400, 2)
     - y_target: Tensor con forma (N,)
+    - example_idx: Índice del ejemplo a guardar
+    - filename: Nombre del archivo CSV de salida
     """
 
     if example_idx < 0 or example_idx >= len(x_pair):
         raise ValueError(f"Índice fuera de rango: {example_idx}")
 
-    # x_pair: (2, 400, 3) → flatten → 2*400*3 = 2400
+    # x_pair: (400, 2) → flatten → 800
     example_data = x_pair[example_idx].reshape(-1).numpy()
-
-    # cap_input: (1,) → float
-    example_cap = cap_input[example_idx].numpy()
 
     # y_target: (1,) → float
     label = y_target[example_idx].numpy()
 
-    # Concatenar todo: [x_pair_flattened, cap_input, label]
-    all_data = np.concatenate([example_data, cap_input[example_idx], [label]])
+    # Concatenar todo: [x_pair_flattened, label]
+    all_data = np.concatenate([example_data, [label]])
 
+    # Guardar en un DataFrame para CSV
     df = pd.DataFrame(all_data.reshape(1, -1))
     df.to_csv(filename, header=False, index=False)
 
@@ -319,25 +318,24 @@ def cargar_modelo(modo="onnx", modelo = None):
         raise ValueError("Modo no reconocido. Usa 'onnx' o 'pth'.")
 
 def export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds):
-    modelo = NARX_Transformer_2var(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
-    checkpoint = torch.load("save_params/trained_model_narx_2var.pth", map_location="cpu")
+    modelo = NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
+    checkpoint = torch.load("save_params/trained_model_narx_2var_1ciclo_ok_last.pth", map_location="cpu")
     modelo.load_state_dict(checkpoint["model_state_dict"], strict=False)
     modelo.eval()
     wrapped_model = WrappedModel_NARX(modelo)  # Envolver modelo con sigmoide
     # Dummy inputs (para NARX)
-    dummy_x_pair = torch.randn(1, 2, 400, 2)
-    dummy_cap_input = torch.randn(1, 1)
+    dummy_x_test = torch.randn(1, 400, 2)
+
 
     torch.onnx.export(
         wrapped_model,
-        (dummy_x_pair, dummy_cap_input),  # ahora son dos entradas
-        "save_params/trained_model_narx_2var.onnx",
-        input_names=["x_pair", "cap_input"],
+        (dummy_x_test),  # ahora son dos entradas
+        "save_params/trained_model_narx_2var_1ciclo_ok_last.onnx",
+        input_names=["x_pair"],
         output_names=["soh_pred"],
         opset_version=17,
         dynamic_axes={
             "x_pair": {0: "batch_size"},
-            "cap_input": {0: "batch_size"},
             "soh_pred": {0: "batch_size"}
         }
     )
@@ -348,8 +346,8 @@ class WrappedModel_NARX(nn.Module):
         super(WrappedModel_NARX, self).__init__()
         self.base_model = base_model
 
-    def forward(self, x_pair, cap_input):
-        return self.base_model(x_pair, cap_input)
+    def forward(self, x_test):
+        return self.base_model(x_test)
 
 
 
