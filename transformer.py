@@ -258,23 +258,24 @@ fixed_val_loader = DataLoader(fixed_val_ds, batch_size=32, shuffle=False)
 ##########################################################################################################
 
 
+
+
 ##########################################################################################################
 #Dataloader para NN4SOH
 ##########################################################################################################
-
 
 # Dividir en train, val y test (estratificado si `labels` tiene clases desbalanceadas)
 data = data[:, :, :2]  # -> ahora (num_samples, 400, 2)
 
 # Normalización canal a canal (por media y std global)
 
-# Normaliza canal a canal
+# # Normaliza canal a canal
 means = data.mean(dim=(0, 1), keepdim=True)  # media por canal
 stds = data.std(dim=(0, 1), keepdim=True)    # std por canal
 
 data = (data - means) / stds  # normalización global por canal
 
-# Guardar para uso posterior
+#Guardar para uso posterior
 torch.save({'mean': means, 'std': stds}, 'save_params/normalization_stats.pt')
 
 
@@ -307,12 +308,71 @@ train_loader = DataLoader(train_ds, batch_size=32, shuffle=False)
 val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
 test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
 
+
+
+##########################################################################
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+import pandas as pd
+import numpy as np
+
+# =============================
+# 1️⃣ Cargar estadísticas de normalización
+# =============================
+# normalization_stats = torch.load('save_params/normalization_stats.pt')
+# means, stds = normalization_stats['mean'], normalization_stats['std']
+
+# =============================
+# 2️⃣ Cargar el nuevo ciclo
+# =============================
+file_path_prueba_real = 'save_params/prueba_real.csv'
+prueba_real_data = pd.read_csv(file_path_prueba_real, header=None)
+
+# Separar los datos en voltaje, corriente y SoH
+voltage_values_prueba = prueba_real_data.iloc[0, :400].values
+current_values_prueba = prueba_real_data.iloc[0, 400:800].values
+soh_value_prueba = prueba_real_data.iloc[0, 800]
+
+# =============================
+# 3️⃣ Formatear y normalizar el ciclo
+# =============================
+nuevo_ciclo = np.stack((voltage_values_prueba, current_values_prueba), axis=-1)
+nuevo_ciclo_tensor = torch.tensor(nuevo_ciclo, dtype=torch.float32)
+
+# Aplicar normalización
+# nuevo_ciclo_tensor = (nuevo_ciclo_tensor - means) / stds
+#
+# # Expandir dimensión para cumplir con (1, 400, 2)
+nuevo_ciclo_tensor = nuevo_ciclo_tensor.unsqueeze(0)
+
+# =============================
+# 4️⃣ Añadir al conjunto de test
+# =============================
+x_test = torch.cat((x_test, nuevo_ciclo_tensor), dim=0)
+y_test = torch.cat((y_test, torch.tensor([0.74], dtype=torch.float32)), dim=0)
+
+# =============================
+# 5️⃣ Actualizar DataLoader
+# =============================
+test_ds = TensorDataset(x_test, y_test)
+test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
+
+# =============================
+# ✅ Verificación final
+# =============================
+print(f"Dimensiones de x_test: {x_test.shape}")
+print(f"Dimensiones de y_test: {y_test.shape}")
+print("¡Nuevo ciclo añadido correctamente al DataLoader de test!")
+
+
+
+##########################################################################
 ##########################################################################
 # PLoteo de los ciclos
 ##########################################################################
 #ploteo_NARX(val_ds_narx)
 #ploteo_NN4SOH_aaptado_a_NARX(train_dataset)
-#ploteo_NN4SOH(x_train, y_train)
+#ploteo_NN4SOH(x_test, y_test)
 ##########################################################################
 
 
@@ -401,7 +461,7 @@ if export_csv == True:
     x_train = x_train.unsqueeze(1)
     x_val = x_val.unsqueeze(1)
     x_test = x_test.unsqueeze(1)
-    save_example_to_csv_narx(x_test, y_test, 0, filename="save_params/ciclo_de_carga_narx_2var_1ciclo_1.csv")
+    save_example_to_csv_narx(x_test, y_test, 0, filename="save_params/ciclo_de_carga_narx_2var_1ciclo_1_last.csv")
 ################################################################################
 
 
@@ -499,6 +559,8 @@ if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
     modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
+    test_ds = TensorDataset(x_test, y_test)
+    test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
     #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)

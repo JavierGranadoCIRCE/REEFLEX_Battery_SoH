@@ -293,7 +293,7 @@ def realizar_inferencia_narx(loader, x_test, y_test,  modo="onnx", modelo=None):
     print(f"MAE: {mae}")
     print(f"MSE: {mse}")
     print(f"RMSE: {rmse}")
-    print(f"SMAPE: {smape}")
+    print(f"ERROR TOTAL: {smape * 100:.1f}%")
 
 
 def cargar_modelo_pth_finetuning(modelo, path_modelo):
@@ -389,15 +389,15 @@ def ploteo_NN4SOH_aaptado_a_NARX(ciclos):
 
     # Recorrer todos los ejemplos del dataset
     for sample_idx in range(len(ciclos)):
-        x_train, y_train = ciclos[sample_idx]  # x_train: (num_cycles, 400, 3), y_train: (num_cycles,)
+        x_val, y_val = ciclos[sample_idx]  # x_train: (num_cycles, 400, 3), y_train: (num_cycles,)
 
         # Recorrer los ciclos de carga dentro de este ejemplo
-        for i in range(x_train.shape[0]):
+        for i in range(x_val.shape[0]):
             plt.figure(figsize=(10, 5))
             for j in range(3):
-                plt.plot(x_train[i, :, j], color=colores[j], label=variables[j])
+                plt.plot(x_val[i, :, j], color=colores[j], label=variables[j])
 
-            soh_value = y_train[i]
+            soh_value = y_val[i]
             plt.xlabel("Tiempo (puntos de muestreo)")
             plt.ylabel("Valor")
             plt.title(f"Ejemplo {sample_idx+1}, Ciclo {i+1} - SoH: {soh_value:.2f}%")
@@ -416,14 +416,14 @@ def ploteo_NN4SOH_aaptado_a_NARX(ciclos):
 #
 # # Etiquetas de las variables
 def ploteo_NN4SOH(ciclos_x, ciclos_y):
-    variables = ["Tensión (V)", "Corriente (A)", "Temperatura (°C)"]
-    colores = ["b", "r", "g"]  # Azul, rojo y verde
+    variables = ["Tensión (V)", "Corriente (A)"]
+    colores = ["b", "r"]  # Azul, rojo y verde
 
     for i in range(ciclos_x.shape[0]):  # Recorremos los ciclos de carga
         plt.figure(figsize=(10, 5))
 
-        # Dibujar las 3 variables en distintos colores
-        for j in range(3):
+        # Dibujar las 2 variables en distintos colores
+        for j in range(2):
             plt.plot(ciclos_x[i, :, j], color=colores[j], label=variables[j])
 
         soh_value = ciclos_y[i]  # Obtener el SoH del ciclo actual

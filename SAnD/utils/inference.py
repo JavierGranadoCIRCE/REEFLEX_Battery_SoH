@@ -236,6 +236,7 @@ class Inference_SoH_NARX:
                 y_test_narx = y_test_narx.to(self.device)
                 b_size = y_test_narx.shape
                 test_total += y_test_narx.shape
+                #test_total += 1
                 #cap_test = cap_test.to(self.device)
                 soh_pred = self.sand_model(x_test_narx)
                 predictions.append(soh_pred.cpu())
