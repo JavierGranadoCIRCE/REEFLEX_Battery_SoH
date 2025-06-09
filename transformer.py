@@ -38,6 +38,8 @@ for mat_file in mat_files:
 
 print(f"Se han cargado {len(mat_files)} archivos. Tamaño total de raw: {len(raw)}")
 
+#Creada rama FineTuning para mejorar el entrenamiento con Datasets de químicas similares a las d VE y con ciclos de laboratorio
+
 #dataFile = 'dataset/ARC-FY/B0005'   # Modify this path
 #raw = scio.loadmat(dataFile)['B0005'][0][0][0][0]
 
