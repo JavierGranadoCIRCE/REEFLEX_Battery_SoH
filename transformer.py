@@ -2,6 +2,7 @@ from comet_ml import Experiment
 import torch.nn as nn
 import torch.optim as optim
 import random
+import pprint
 from SAnD.utils.inference import Inference_SoH_Siamese, Inference_SoH_Normal, Inference_SoH_Normal_Improve, Inference_SoH_NARX
 from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, create_cycle_triplets, \
     realizar_inferencia_narx, WrappedModel_NARX,  export_trained_model_to_onnx, ploteo_NARX, \
@@ -26,7 +27,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
-mat_files = glob.glob(os.path.join(data_folder, "*.mat"))
+mat_files = glob.glob(os.path.join(data_folder, "B0100.mat"))
 # Lista para almacenar los datos concatenados
 raw = []
 # Cargar cada archivo y agregar sus datos a la lista `raw`
@@ -38,7 +39,64 @@ for mat_file in mat_files:
 
 print(f"Se han cargado {len(mat_files)} archivos. Tamaño total de raw: {len(raw)}")
 
+pprint.pprint(raw[0])
+
+
 #Creada rama FineTuning para mejorar el entrenamiento con Datasets de químicas similares a las d VE y con ciclos de laboratorio
+
+
+# def adaptar_a_formato_B0005(cycles_data, soh_labels):
+#     """
+#     Transforma los ciclos de carga y etiquetas SoH al formato compatible con B0005.mat
+#     """
+#     data_struct = []
+#
+#     for i in range(len(cycles_data)):
+#         cycle_entry = []
+#         cycle_entry.append(['charge'])  # step name
+#         cycle_entry.append(np.zeros((1, 1)))  # temp dummy
+#         cycle_entry.append(np.zeros((1, 1)))  # temp dummy
+#         step_data = np.zeros((7, 1), dtype=object)
+#
+#         # Cada variable: V, I, T
+#         for var_idx in range(3):
+#             step_data[var_idx][0] = np.array(cycles_data[i][:, var_idx])
+#
+#         # tiempo (simulado como intervalo de 10s)
+#         step_data[5][0] = np.array([j * 10 for j in range(len(cycles_data[i]))])
+#
+#         # dummy para temperatura ambiental y otras
+#         step_data[3][0] = np.zeros_like(step_data[0][0])
+#         step_data[4][0] = np.zeros_like(step_data[0][0])
+#         step_data[6][0] = np.ones_like(step_data[0][0]) * soh_labels[i]
+#
+#         # Añadir estructura final
+#         cycle_entry.append([[step_data]])
+#         data_struct.append(cycle_entry)
+#
+#     return np.array([[(data_struct,)]], dtype=object)
+#
+#
+#
+# # USO DEL SCRIPT
+# # Carga del archivo B0100.mat generado previamente (estructura original)
+# mat_original = mat_files
+# cycles_data = mat_original['data']
+# soh_labels = mat_original['label'].reshape(-1)
+#
+# # Adaptación
+# estructura_B0005 = adaptar_a_formato_B0005(cycles_data, soh_labels)
+#
+# # Guardar con estructura como la de B0005.mat
+# scio.savemat('B0100_compatible.mat', {'B0100': estructura_B0005})
+#
+# print("Archivo B0100_compatible.mat generado correctamente con la estructura de B0005.")
+#
+
+
+
+
+
 
 #dataFile = 'dataset/ARC-FY/B0005'   # Modify this path
 #raw = scio.loadmat(dataFile)['B0005'][0][0][0][0]
@@ -48,12 +106,12 @@ cycles = []
 labels = []
 for i in range(len(raw)):
     if raw[i][0] == ['charge']:
-        if i+1 != len(raw) and raw[i+1][0] != ['charge'] and len(raw[i][3][0][0][0][0]) > 850: # discard unfair records
-            cycles.append(raw[i][3][0][0])
-            if raw[i+1][0] == ['discharge']:
-                labels.append(raw[i+1][3][0][0][6][0])
-            elif i+2 != len(raw) and raw[i+2][0] == ['discharge']:
-                labels.append(raw[i+2][3][0][0][6][0])
+        # if i+1 != len(raw) and raw[i+1][0] != ['charge'] and len(raw[i][3][0][0][0][0]) > 850: # discard unfair records
+        cycles.append(raw[i][3][0][0])
+        if raw[i+1][0] == ['discharge']:
+            labels.append(raw[i+1][3][0][0][6][0])
+        elif i+2 != len(raw) and raw[i+2][0] == ['discharge']:
+            labels.append(raw[i+2][3][0][0][6][0])
 cycles.pop()
 assert (len(cycles) == len(labels)), 'Number of measurements not matched!'
 
