@@ -2,6 +2,13 @@ from comet_ml import Experiment
 import torch.nn as nn
 import torch.optim as optim
 import random
+import pandas as pd
+import os
+import torch
+import pandas as pd
+import numpy as np
+from torch.utils.data import DataLoader, TensorDataset
+import torch
 import pprint
 from SAnD.utils.inference import Inference_SoH_Siamese, Inference_SoH_Normal, Inference_SoH_Normal_Improve, Inference_SoH_NARX
 from SAnD.utils.functions import save_example_to_csv, save_example_to_csv_narx, create_cycle_triplets, \
@@ -27,7 +34,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
-mat_files = glob.glob(os.path.join(data_folder, "B0100.mat"))
+mat_files = glob.glob(os.path.join(data_folder, "*.mat"))
 # Lista para almacenar los datos concatenados
 raw = []
 # Cargar cada archivo y agregar sus datos a la lista `raw`
@@ -43,6 +50,170 @@ pprint.pprint(raw[0])
 
 
 #Creada rama FineTuning para mejorar el entrenamiento con Datasets de químicas similares a las d VE y con ciclos de laboratorio
+
+
+
+########################################################################
+#Plotear ciclos de laboratorio *.csv###################################
+########################################################################
+
+# Cargar el CSV
+# import os
+# print("Directorio actual:", os.getcwd())
+# print("Existe el archivo:", os.path.exists('dataset/Data_finetuning/fila_normalizada_soh_079.csv'))
+csv_path = 'dataset/Data_finetuning/fila_normalizada_soh_079.csv'  # Modifica la ruta si es necesario
+row = pd.read_csv(csv_path, header=None).values[0]
+
+# Separar variables
+V = row[0:400]
+I = row[400:800]
+T = row[800:1200]
+SoH = row[1200]
+
+# Crear tensor con la misma forma (400, 3)
+sample = torch.tensor(np.stack((V, I, T), axis=1), dtype=torch.float32)  # shape: (400, 3)
+label = torch.tensor(SoH, dtype=torch.float32)  # shape: scalar
+
+# Si quieres usarlo junto con el resto de los datos:
+data = torch.stack([sample])  # shape: (1, 400, 3)
+labels = torch.tensor([SoH])  # shape: (1,)
+
+
+# Número de puntos por señal
+n = 400  # Suponiendo que hay n de V, n de I, y 1 SoH
+
+# # Extrae señales
+# V = row[0:400]
+# I = row[400:800]
+# SoH = row[1200]
+
+# Eje temporal ficticio (puedes ajustar si tienes tiempo real)
+x = np.arange(n)
+
+# Plot
+plt.figure(figsize=(10, 5))
+plt.plot(x, V, label='Voltaje (V)')
+plt.plot(x, I, label='Intensidad (I)')
+plt.title(f'Señales de Voltaje e Intensidad - SoH = {SoH:.3f}')
+plt.xlabel('Muestra')
+plt.ylabel('Valor')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+plt.show()
+
+
+########################################################################
+#CPlotear ciclos de laboratorio *.csv###################################
+########################################################################
+
+
+
+########################################################################
+# Fine tuning con ciclos reales de lab
+########################################################################
+#
+# csv_paths = [
+#     'dataset/Data_finetuning/fila_normalizada_soh_050.csv',
+#     'dataset/Data_finetuning/fila_normalizada_soh_073.csv',
+#     'dataset/Data_finetuning/fila_normalizada_soh_079.csv'
+# ]
+#
+# samples = []
+# labels = []
+#
+# for path in csv_paths:
+#     row = pd.read_csv(path, header=None).values[0]
+#
+#     V = row[0:400]
+#     I = row[400:800]
+#     SoH = row[1200]
+#
+#     # Crear tensor (400, 2) solo con V e I
+#     sample = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32)
+#     label = torch.tensor(SoH, dtype=torch.float32)
+#
+#     samples.append(sample)
+#     labels.append(label)
+#
+# # Convertir a tensores (3, 400, 2) y (3,)
+# data = torch.stack(samples)
+# targets = torch.tensor(labels)
+#
+# # Dataset y DataLoader
+# dataset = TensorDataset(data, targets)
+# dataloader_finetune = DataLoader(dataset, batch_size=1, shuffle=True)
+
+########################################################################
+# Fine-tuning del modelo preentrenado
+########################################################################
+#
+# # Cargar modelo preentrenado
+model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
+# model.load_state_dict(torch.load('modelo_preentrenado.pth'))
+# # print(model)
+#
+# # Congelar todas las capas
+# for param in model.parameters():
+#     param.requires_grad = False
+#
+# # Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
+# for param in model.fc.parameters():
+#     param.requires_grad = True
+#
+# # Optimizador con learning rate bajo
+# optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
+#
+# # Función de pérdida
+# criterion = torch.nn.MSELoss()
+#
+# # Fine-tuning loop
+# for epoch in range(50):
+#     for x, y in dataloader_finetune:
+#         output = model(x).squeeze()
+#         loss = criterion(output, y)
+#         loss.backward()
+#         optimizer.step()
+#         optimizer.zero_grad()
+#     print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
+
+########################################################################
+# Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
+########################################################################
+
+# Cargar nuevo ciclo para inferencia
+csv_infer = 'dataset/Data_finetuning/fila_normalizada_soh_079.csv'
+row = pd.read_csv(csv_infer, header=None).values[0]
+
+V = row[0:400]
+I = row[400:800]
+real_SoH = row[1200]  # Para comparar si lo deseas
+
+# Preparar input (1, 400, 2)
+sample_infer = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32).unsqueeze(0)
+
+# Poner modelo en modo evaluación
+model.eval()
+with torch.no_grad():
+    predicted_soh = model(sample_infer).item()
+
+print("\nRESULTADO DE INFERENCIA:")
+print(f"SoH real:      {real_SoH:.4f}")
+print(f"SoH predicho:  {predicted_soh:.4f}")
+# Calcular el error absoluto y relativo
+error_absoluto = abs(predicted_soh - real_SoH)
+error_relativo = (error_absoluto / real_SoH) * 100 if real_SoH != 0 else float('inf')
+
+# Mostrar errores
+print(f"\nERROR:")
+print(f"Error absoluto: {error_absoluto:.4f}")
+print(f"Error relativo: {error_relativo:.2f}%")
+
+
+########################################################################
+# Fine tuning con ciclos reales de lab
+########################################################################
 
 
 # def adaptar_a_formato_B0005(cycles_data, soh_labels):
@@ -106,12 +277,12 @@ cycles = []
 labels = []
 for i in range(len(raw)):
     if raw[i][0] == ['charge']:
-        # if i+1 != len(raw) and raw[i+1][0] != ['charge'] and len(raw[i][3][0][0][0][0]) > 850: # discard unfair records
-        cycles.append(raw[i][3][0][0])
-        if raw[i+1][0] == ['discharge']:
-            labels.append(raw[i+1][3][0][0][6][0])
-        elif i+2 != len(raw) and raw[i+2][0] == ['discharge']:
-            labels.append(raw[i+2][3][0][0][6][0])
+        if i+1 != len(raw) and raw[i+1][0] != ['charge'] and len(raw[i][3][0][0][0][0]) > 850: # discard unfair records
+            cycles.append(raw[i][3][0][0])
+            if raw[i+1][0] == ['discharge']:
+                labels.append(raw[i+1][3][0][0][6][0])
+            elif i+2 != len(raw) and raw[i+2][0] == ['discharge']:
+                labels.append(raw[i+2][3][0][0][6][0])
 cycles.pop()
 assert (len(cycles) == len(labels)), 'Number of measurements not matched!'
 
@@ -430,7 +601,7 @@ print("¡Nuevo ciclo añadido correctamente al DataLoader de test!")
 ##########################################################################
 # PLoteo de los ciclos
 ##########################################################################
-#ploteo_NARX(val_ds_narx)
+# ploteo_NARX(val_ds_narx)
 #ploteo_NN4SOH_aaptado_a_NARX(train_dataset)
 #ploteo_NN4SOH(x_test, y_test)
 ##########################################################################
