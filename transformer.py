@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import torch
 import pandas as pd
+import scipy.io
 import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
 import torch
@@ -33,86 +34,33 @@ import torch, gc
 from torch.utils.data import TensorDataset, DataLoader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
-mat_files = glob.glob(os.path.join(data_folder, "*.mat"))
-# Lista para almacenar los datos concatenados
-raw = []
-# Cargar cada archivo y agregar sus datos a la lista `raw`
-for mat_file in mat_files:
-    data = scio.loadmat(mat_file)
-    key = list(data.keys())[-1]  # Toma la última clave que suele ser el nombre del dataset
-    extracted_data = data[key][0][0][0][0]  # Extrae los datos
-    raw.extend(extracted_data)  # Concatenar los datos a la lista
-
-print(f"Se han cargado {len(mat_files)} archivos. Tamaño total de raw: {len(raw)}")
-
-pprint.pprint(raw[0])
-
-
-#Creada rama FineTuning para mejorar el entrenamiento con Datasets de químicas similares a las d VE y con ciclos de laboratorio
-
-
-
-########################################################################
-#Plotear ciclos de laboratorio *.csv###################################
-########################################################################
-
-# Cargar el CSV
-# import os
-# print("Directorio actual:", os.getcwd())
-# print("Existe el archivo:", os.path.exists('dataset/Data_finetuning/fila_normalizada_soh_079.csv'))
-csv_path = 'dataset/Data_finetuning/fila_normalizada_soh_079.csv'  # Modifica la ruta si es necesario
-row = pd.read_csv(csv_path, header=None).values[0]
-
-# Separar variables
-V = row[0:400]
-I = row[400:800]
-T = row[800:1200]
-SoH = row[1200]
-
-# Crear tensor con la misma forma (400, 3)
-sample = torch.tensor(np.stack((V, I, T), axis=1), dtype=torch.float32)  # shape: (400, 3)
-label = torch.tensor(SoH, dtype=torch.float32)  # shape: scalar
-
-# Si quieres usarlo junto con el resto de los datos:
-data = torch.stack([sample])  # shape: (1, 400, 3)
-labels = torch.tensor([SoH])  # shape: (1,)
-
-
-# Número de puntos por señal
-n = 400  # Suponiendo que hay n de V, n de I, y 1 SoH
-
-# # Extrae señales
-# V = row[0:400]
-# I = row[400:800]
-# SoH = row[1200]
-
-# Eje temporal ficticio (puedes ajustar si tienes tiempo real)
-x = np.arange(n)
-
-# Plot
-plt.figure(figsize=(10, 5))
-plt.plot(x, V, label='Voltaje (V)')
-plt.plot(x, I, label='Intensidad (I)')
-plt.title(f'Señales de Voltaje e Intensidad - SoH = {SoH:.3f}')
-plt.xlabel('Muestra')
-plt.ylabel('Valor')
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-plt.show()
-
-
-########################################################################
-#CPlotear ciclos de laboratorio *.csv###################################
-########################################################################
-
-
-
-########################################################################
-# Fine tuning con ciclos reales de lab
-########################################################################
+# data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
+# mat_files = glob.glob(os.path.join(data_folder, "NMC_CELL_1_processed.mat"))
+# # Lista para almacenar los datos concatenados
+# raw = []
+# # # Cargar cada archivo y agregar sus datos a la lista `raw`
+# for mat_file in mat_files:
+#     data = scio.loadmat(mat_file)
+#     key = list(data.keys())[-1]  # Toma la última clave que suele ser el nombre del dataset
+#     extracted_data = data[key][0][0][0][0]  # Extrae los datos
+#     raw.extend(extracted_data)  # Concatenar los datos a la lista
+#
+# print(f"Se han cargado {len(mat_files)} archivos. Tamaño total de raw: {len(raw)}")
+#
+# pprint.pprint(raw[0])
+#
+#
+# #Creada rama FineTuning para mejorar el entrenamiento con Datasets de químicas similares a las d VE y con ciclos de laboratorio
+#
+#
+#
+#
+#
+#
+#
+# ########################################################################
+# # Fine tuning con ciclos reales de lab
+# ########################################################################
 #
 # csv_paths = [
 #     'dataset/Data_finetuning/fila_normalizada_soh_050.csv',
@@ -145,50 +93,99 @@ plt.show()
 # dataset = TensorDataset(data, targets)
 # dataloader_finetune = DataLoader(dataset, batch_size=1, shuffle=True)
 
+
+# ########################################################################
+# # Fine tuning con Dataset de Laboratorios Sandia
+# ########################################################################
+# Cargar ambos archivos
+
+# Ruta al fichero combinado
+data_path = "dataset/ARC-FY/dataset_final.mat"
+# Cargar los datos
+data = scipy.io.loadmat(data_path)["data"]  # (1228, 1201)
+
+# Extraer tensores (400, 2) y etiquetas SoH
+samples = []
+labels = []
+
+for row in data:
+    V = row[0:400]
+    I = row[400:800]
+    SoH = row[800]
+
+    sample = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32)
+    label = torch.tensor(SoH, dtype=torch.float32)
+
+    samples.append(sample)
+    labels.append(label)
+
+    plt.figure()
+    plt.plot(V, label="Voltaje (V)")
+    plt.plot(I, label="Corriente (A)")
+    plt.title(f"SoH = {SoH:.3f}")
+    plt.xlabel("Tiempo (muestras)")
+    plt.ylabel("Valor")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
+# Crear tensores finales
+X_tensor = torch.stack(samples)
+y_tensor = torch.tensor(labels)
+
+# Dataset y DataLoader combinados
+dataset_finetune = TensorDataset(X_tensor, y_tensor)
+dataloader_finetune = DataLoader(dataset_finetune, batch_size=1, shuffle=True)
+
+
+
+
 ########################################################################
 # Fine-tuning del modelo preentrenado
 ########################################################################
 #
 # # Cargar modelo preentrenado
 model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
-# model.load_state_dict(torch.load('modelo_preentrenado.pth'))
-# # print(model)
-#
-# # Congelar todas las capas
-# for param in model.parameters():
-#     param.requires_grad = False
-#
-# # Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
-# for param in model.fc.parameters():
-#     param.requires_grad = True
-#
-# # Optimizador con learning rate bajo
-# optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
-#
-# # Función de pérdida
-# criterion = torch.nn.MSELoss()
-#
-# # Fine-tuning loop
-# for epoch in range(50):
-#     for x, y in dataloader_finetune:
-#         output = model(x).squeeze()
-#         loss = criterion(output, y)
-#         loss.backward()
-#         optimizer.step()
-#         optimizer.zero_grad()
-#     print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
+model.load_state_dict(torch.load('modelo_preentrenado.pth'))
+# print(model)
+
+# Congelar todas las capas
+for param in model.parameters():
+    param.requires_grad = False
+
+# Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
+for param in model.fc.parameters():
+    param.requires_grad = True
+
+# Optimizador con learning rate bajo
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
+
+# Función de pérdida
+criterion = torch.nn.MSELoss()
+
+# Fine-tuning loop
+for epoch in range(50):
+    for x, y in dataloader_finetune:
+        output = model(x).squeeze()
+        loss = criterion(output, y)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+    print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
 
 ########################################################################
 # Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
 ########################################################################
 
 # Cargar nuevo ciclo para inferencia
-csv_infer = 'dataset/Data_finetuning/fila_normalizada_soh_079.csv'
+csv_infer = 'dataset/Data_finetuning/fila_normalizada_soh_050.csv'
 row = pd.read_csv(csv_infer, header=None).values[0]
 
 V = row[0:400]
 I = row[400:800]
-real_SoH = row[1200]  # Para comparar si lo deseas
+real_SoH = 0.76  # Para comparar si lo deseas
 
 # Preparar input (1, 400, 2)
 sample_infer = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32).unsqueeze(0)
@@ -210,6 +207,61 @@ print(f"\nERROR:")
 print(f"Error absoluto: {error_absoluto:.4f}")
 print(f"Error relativo: {error_relativo:.2f}%")
 
+# ########################################################################
+# #Plotear ciclos de laboratorio *.csv###################################
+# ########################################################################
+#
+# # Cargar el CSV
+# # import os
+# # print("Directorio actual:", os.getcwd())
+# # print("Existe el archivo:", os.path.exists('dataset/Data_finetuning/fila_normalizada_soh_079.csv'))
+# csv_path = 'dataset/Data_finetuning/fila_normalizada_soh_050.csv'  # Modifica la ruta si es necesario
+# row = pd.read_csv(csv_path, header=None).values[0]
+#
+# # Separar variables
+# V = row[0:400]
+# I = row[400:800]
+# T = row[800:1200]
+# SoH = row[1200]
+#
+# # Crear tensor con la misma forma (400, 3)
+# sample = torch.tensor(np.stack((V, I, T), axis=1), dtype=torch.float32)  # shape: (400, 3)
+# label = torch.tensor(SoH, dtype=torch.float32)  # shape: scalar
+#
+# # Si quieres usarlo junto con el resto de los datos:
+# data = torch.stack([sample])  # shape: (1, 400, 3)
+# labels = torch.tensor([SoH])  # shape: (1,)
+#
+#
+# # Número de puntos por señal
+# n = 400  # Suponiendo que hay n de V, n de I, y 1 SoH
+#
+# # # Extrae señales
+# # V = row[0:400]
+# # I = row[400:800]
+# # SoH = row[1200]
+#
+# # Eje temporal ficticio (puedes ajustar si tienes tiempo real)
+# x = np.arange(n)
+#
+# # Plot
+# plt.figure(figsize=(10, 5))
+# plt.plot(x, V, label='Voltaje (V)')
+# plt.plot(x, I, label='Intensidad (I)')
+# # plt.title(f'Señales de Voltaje e Intensidad - SoH = {SoH:.3f}')
+# plt.title(f'SoH_predicho = {predicted_soh:.3f}- SoH_real = {real_SoH:.3f} - Error relativo: {error_relativo:.2f}%')
+# plt.xlabel('Muestra')
+# plt.ylabel('Valor')
+# plt.legend()
+# plt.grid(True)
+# plt.tight_layout()
+# plt.show()
+# plt.show()
+
+
+########################################################################
+#CPlotear ciclos de laboratorio *.csv###################################
+########################################################################
 
 ########################################################################
 # Fine tuning con ciclos reales de lab
