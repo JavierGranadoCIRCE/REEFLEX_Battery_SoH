@@ -1,12 +1,11 @@
 import scipy.io
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.io.matlab import mat_struct
 from scipy.interpolate import interp1d
 from scipy.integrate import trapezoid
+import os
 from scipy.ndimage import binary_dilation
 from scipy.signal import medfilt
-import os
 
 # Ruta y archivos
 ruta = "C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY"
@@ -29,7 +28,7 @@ def extraer_segmento(t, I, V):
         fin = fin_candidates[0]
         if fin - inicio < 10:
             return None
-        return t[inicio:fin], I[inicio:fin], V[inicio:fin]
+        return t[inicio:fin], I[inicio:fin], V[inicio:fin], inicio, fin
     except:
         return None
 
@@ -42,57 +41,62 @@ for archivo in archivos:
 
     for i, ciclo in enumerate(tabla):
         try:
-            if archivo == "NMC_CELL_2.mat" and i == 2:
-                print(f"⚠️ Ciclo {i} saltado manualmente por ser erróneo.")
-                continue
-
             I = np.array(ciclo.Current).flatten()
             V = np.array(ciclo.Voltage).flatten()
+
             if len(I) != len(V):
                 print(f"⚠️ Ciclo {i} descartado: dimensiones no coinciden I:{len(I)} V:{len(V)}")
                 continue
 
+            if archivo == "NMC_CELL_2.mat" and i == 2:
+                print(f"⚠️ Ciclo {i} descartado manualmente por ser anómalo")
+                continue
+
             t = np.arange(len(V))
             print(f"🔍 Plot ciclo {i} — t:{t.shape}, I:{I.shape}, V:{V.shape}")
-            segmento = extraer_segmento(t, I, V)
 
-            if segmento is None:
+            I_original = I.copy()  # Guardamos corriente original antes de modificar
+
+            resultado = extraer_segmento(t, I, V)
+            if resultado is None:
                 print(f"⚠️ Ciclo {i} descartado: segmento no válido")
                 continue
 
-            t_rec, I_rec, V_rec = segmento
+            t_rec, I_rec, V_rec, inicio, fin = resultado
             t_rec = t_rec - t_rec[0]
 
-            # Interpolación y normalización
+            # Cálculo de capacidad con corriente original (sin normalizar)
+            I_rec_amperios = I_original[inicio:fin]
+            Q = trapezoid(I_rec_amperios, t_rec) / 3600  # Capacidad en Ah
+            corriente_media = np.mean(I_rec_amperios)
+            print(f"Ciclo {i} — duración del segmento: {t_rec[-1]:.2f}s, corriente media: {corriente_media:.4f} A")
+
             f_I = interp1d(t_rec, I_rec, kind="linear")
             f_V = interp1d(t_rec, V_rec, kind="linear")
             t_uniforme = np.linspace(0, t_rec[-1], 400)
             I_interp = normalizar(f_I(t_uniforme))
             V_interp = normalizar(f_V(t_uniforme))
 
-            # Eliminar escalones en la corriente y corrección en la tensión
+            # Eliminar escalones
             mask_corriente_salto = I_interp == -1
             if np.any(mask_corriente_salto):
                 I_interp[mask_corriente_salto] = 1
                 mascara_expandida = binary_dilation(mask_corriente_salto, iterations=2)
                 V_interp[mascara_expandida] = 1
 
-            # Suavizado de picos residuales
+            # Suavizar picos
             I_interp = suavizar(I_interp, kernel_size=5)
             V_interp = suavizar(V_interp, kernel_size=5)
 
-            # Cálculo de capacidad y SoH
-            I_rec_amperios = I_rec / 1000  # convertir de mA a A
-            Q = trapezoid(I_rec_amperios, t_rec)  # en A·s
-            Q_ah = Q / 3600  # pasar a Ah
-            Q_nominal = 3.0
-            SoH = Q_ah / Q_nominal
+            # Cálculo del SoH
+            Q_nominal = 4
+            SoH = Q / Q_nominal
 
-            # 🔍 Plot después del recorte y limpieza
+            # Plot final con SoH
             plt.figure(figsize=(10, 3))
             plt.plot(np.arange(400), I_interp, label='Corriente')
             plt.plot(np.arange(400), V_interp, label='Tensión')
-            plt.title(f'Ciclo {i} — SoH: {SoH:.3f}')
+            plt.title(f'SoH = {SoH:.3f}')
             plt.xlabel('Tiempo')
             plt.ylabel('Magnitud')
             plt.legend()
@@ -106,7 +110,6 @@ for archivo in archivos:
         except Exception as e:
             print(f"⚠️ Ciclo {i} descartado: {e}")
 
-# Guardado final
 if len(ciclos_procesados) == 0:
     print("❌ No se han encontrado ciclos válidos.")
 else:
@@ -115,6 +118,5 @@ else:
     dataset = np.concatenate([X.reshape(X.shape[0], -1), y[:, None]], axis=1)
     output_path = os.path.join(ruta, "dataset_final.mat")
     scipy.io.savemat(output_path, {"dataset": dataset})
-    print(f"💾 Dataset guardado como dataset_final.mat con forma {dataset.shape}")
-
+    print(f"📂 Dataset guardado como dataset_final.mat con forma {dataset.shape}")
 

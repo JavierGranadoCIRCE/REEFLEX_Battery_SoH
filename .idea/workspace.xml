@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="5fd89106-d7ab-433d-b697-67b9eb2059d7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_sin_T_final.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_sin_T_final.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,20 +21,28 @@
   &quot;associatedIndex&quot;: 8
 }</component>
   <component name="ProjectId" id="2w0cWGeS1FiSB0ke465DTk5t3uP" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.transformer.executor&quot;: &quot;Debug&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;FineTuning&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/generar_dataset_sandia_sin_T_final.py&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.transformer.executor": "Debug",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "FineTuning",
+    "last_opened_file_path": "C:/Users/reeflex/olimpIAdas_VoltIA"
   }
-}</component>
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\reeflex\olimpIAdas_VoltIA" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="transformer" type="PythonConfigurationType" factoryName="Python">
       <module name="NN4SOH" />
@@ -322,8 +331,8 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_sin_T_final.py</url>
-          <line>103</line>
-          <option name="timeStamp" value="230" />
+          <line>107</line>
+          <option name="timeStamp" value="238" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
