@@ -93,18 +93,18 @@ for archivo in archivos:
             SoH = Q / Q_nominal
 
             # Plot final con SoH
-            plt.figure(figsize=(10, 3))
-            plt.plot(np.arange(400), I_interp, label='Corriente')
-            plt.plot(np.arange(400), V_interp, label='Tensión')
-            plt.title(f'SoH = {SoH:.3f}')
-            plt.xlabel('Tiempo')
-            plt.ylabel('Magnitud')
-            plt.legend()
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
+            # plt.figure(figsize=(10, 3))
+            # plt.plot(np.arange(400), I_interp, label='Corriente')
+            # plt.plot(np.arange(400), V_interp, label='Tensión')
+            # plt.title(f'SoH = {SoH:.3f}')
+            # plt.xlabel('Tiempo')
+            # plt.ylabel('Magnitud')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.tight_layout()
+            # plt.show()
 
-            entrada = np.stack([V_interp, I_interp], axis=-1)
+            entrada = np.stack([I_interp, V_interp], axis=-1)
             ciclos_procesados.append((entrada, SoH))
 
         except Exception as e:
@@ -113,10 +113,15 @@ for archivo in archivos:
 if len(ciclos_procesados) == 0:
     print("❌ No se han encontrado ciclos válidos.")
 else:
-    X = np.array([x[0] for x in ciclos_procesados])
-    y = np.array([x[1] for x in ciclos_procesados])
+    X = np.array([x[0] for x in ciclos_procesados])  # (num_samples, 400, 2)
+    y = np.array([x[1] for x in ciclos_procesados])  # (num_samples,)
     dataset = np.concatenate([X.reshape(X.shape[0], -1), y[:, None]], axis=1)
     output_path = os.path.join(ruta, "dataset_final.mat")
-    scipy.io.savemat(output_path, {"dataset": dataset})
+    scipy.io.savemat(
+        output_path,
+        {"dataset": np.array(dataset, dtype=np.float32)},
+        do_compression=True,
+        long_field_names=True
+    )
     print(f"📂 Dataset guardado como dataset_final.mat con forma {dataset.shape}")
 
