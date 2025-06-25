@@ -256,6 +256,7 @@ folder_infer = 'dataset/Data_finetuning'
 # Filtrar todos los archivos CSV en la carpeta
 csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
 
+
 # Poner modelo en modo evaluación
 model.eval()
 
