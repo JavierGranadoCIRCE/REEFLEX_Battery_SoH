@@ -199,7 +199,7 @@ y_tensor = torch.tensor(labels)
 
 # Dataset y DataLoader combinados
 dataset_finetune = TensorDataset(X_tensor, y_tensor)
-dataloader_finetune = DataLoader(dataset_finetune, batch_size=32, shuffle=True)
+dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
 
 
 ########################################################################
@@ -207,44 +207,44 @@ dataloader_finetune = DataLoader(dataset_finetune, batch_size=32, shuffle=True)
 ########################################################################
 #
 # # Cargar modelo preentrenado
-# model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
-model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
+model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
+#model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
 # model.load_state_dict(torch.load('modelo_preentrenado.pth'))
 print(model)
 
-# # Congelar todas las capas
-# for param in model.parameters():
-#     param.requires_grad = False
-#
-# # Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
-# for param in model.fc.parameters():
-#     param.requires_grad = True
-#
-# # Optimizador con learning rate bajo
-# optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
-#
-# # Función de pérdida
-# criterion = torch.nn.MSELoss()
-#
-# # Fine-tuning loop
-# for epoch in range(2):
-#     for x, y in dataloader_finetune:
-#         output = model(x).squeeze()
-#         loss = criterion(output, y)
-#         loss.backward()
-#         optimizer.step()
-#         optimizer.zero_grad()
-#         print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
-#
-# # Guardar el modelo finetuneado
-# torch.save({
-#     'model_state_dict': model.state_dict(),
-#     'optimizer_state_dict': optimizer.state_dict(),
-#     'epoch': epoch,
-#     'loss': loss.item()
-# }, "save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
-# output_path = "save_params/trained_model_narx_2var_finetuneado_csv_2.pth"
-# print(f"✅ Modelo finetuneado guardado en: {output_path}")
+# Congelar todas las capas
+for param in model.parameters():
+    param.requires_grad = False
+
+# Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
+for param in model.fc.parameters():
+    param.requires_grad = True
+
+# Optimizador con learning rate bajo
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
+
+# Función de pérdida
+criterion = torch.nn.MSELoss()
+
+# Fine-tuning loop
+for epoch in range(5):
+    for x, y in dataloader_finetune:
+        output = model(x).squeeze()
+        loss = criterion(output, y)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
+
+# Guardar el modelo finetuneado
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'epoch': epoch,
+    'loss': loss.item()
+}, "save_params/trained_model_narx_2var_finetuneado_csv_3.pth")
+output_path = "save_params/trained_model_narx_2var_finetuneado_csv_3.pth"
+print(f"✅ Modelo finetuneado guardado en: {output_path}")
 
 ########################################################################
 # Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv

@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="5fd89106-d7ab-433d-b697-67b9eb2059d7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_sin_T_final.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_sin_T_final.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -33,7 +32,7 @@
   "keyToString": {
     "Python.generar_dataset_sandia_nuevo.executor": "Debug",
     "Python.generar_dataset_sandia_sin_T_final.executor": "Run",
-    "Python.transformer.executor": "Debug",
+    "Python.transformer.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
