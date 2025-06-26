@@ -28,24 +28,51 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.generar_dataset_sandia_nuevo.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.generar_dataset_sandia_sin_T_final.executor&quot;: &quot;Run&quot;,
-    &quot;Python.transformer.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;FineTuning&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/reeflex/olimpIAdas_VoltIA/transformer.py&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.generar_dataset_sandia_SoH_calculado.executor": "Run",
+    "Python.generar_dataset_sandia_nuevo.executor": "Debug",
+    "Python.generar_dataset_sandia_sin_T_final.executor": "Run",
+    "Python.generar_dataset_sandia_subciclos.executor": "Run",
+    "Python.transformer.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "FineTuning",
+    "last_opened_file_path": "C:/Users/reeflex/olimpIAdas_VoltIA/transformer.py"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\reeflex\olimpIAdas_VoltIA" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\reeflex\olimpIAdas_VoltIA\dataset\ARC-FY" />
+    </key>
   </component>
   <component name="RunManager" selected="Python.transformer">
+    <configuration name="generar_dataset_sandia_SoH_calculado" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="NN4SOH" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/dataset/ARC-FY" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_SoH_calculado.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="generar_dataset_sandia_nuevo" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="NN4SOH" />
       <option name="ENV_FILES" value="" />
@@ -90,7 +117,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="transformer" type="PythonConfigurationType" factoryName="Python">
+    <configuration name="generar_dataset_sandia_subciclos" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="NN4SOH" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -98,6 +125,25 @@
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/dataset/ARC-FY" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset/ARC-FY/generar_dataset_sandia_subciclos.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="transformer" type="PythonConfigurationType" factoryName="Python">
+      <module name="NN4SOH" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
       <option name="SDK_NAME" value="Python 3.10" />
       <option name="WORKING_DIRECTORY" value="C:\Users\reeflex\olimpIAdas_VoltIA" />
@@ -115,11 +161,15 @@
     </configuration>
     <list>
       <item itemvalue="Python.transformer" />
+      <item itemvalue="Python.generar_dataset_sandia_SoH_calculado" />
+      <item itemvalue="Python.generar_dataset_sandia_subciclos" />
       <item itemvalue="Python.generar_dataset_sandia_nuevo" />
       <item itemvalue="Python.generar_dataset_sandia_sin_T_final" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.generar_dataset_sandia_SoH_calculado" />
+        <item itemvalue="Python.generar_dataset_sandia_subciclos" />
         <item itemvalue="Python.generar_dataset_sandia_nuevo" />
         <item itemvalue="Python.generar_dataset_sandia_sin_T_final" />
       </list>
@@ -410,11 +460,6 @@
           <url>file://$PROJECT_DIR$/transformer.py</url>
           <line>155</line>
           <option name="timeStamp" value="305" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/transformer.py</url>
-          <line>182</line>
-          <option name="timeStamp" value="306" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/transformer.py</url>

@@ -153,7 +153,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # # # Fine tuning con Dataset de Laboratorios Sandia *.csv
 # # ########################################################################
 # Ruta al CSV
-csv_path = "C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/dataset_ciclos_carga.csv"
+csv_path = "C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/dataset_ciclos_carga_SOHCargaDescarga.csv"
 
 # Cargar datos
 data = pd.read_csv(csv_path, header=None).values
@@ -178,19 +178,19 @@ for i, row in enumerate(data):
 
     samples.append(sample)
     labels.append(label)
-#
-#     # # Si quieres ver el gráfico de cada ciclo:
-#     # plt.figure(figsize=(10, 3))
-#     # plt.plot(I, label="Corriente", color="tab:orange")
-#     # plt.plot(V, label="Tensión", color="tab:blue")
-#     # plt.title(f"SoH = {SoH:.3f}")
-#     # plt.xlabel("Tiempo (interpolado)")
-#     # plt.ylabel("Magnitud")
-#     # plt.legend()
-#     # plt.grid(True)
-#     # plt.tight_layout()
-#     # plt.show()
-#
+
+    # # Si quieres ver el gráfico de cada ciclo:
+    # plt.figure(figsize=(10, 3))
+    # plt.plot(I, label="Corriente", color="tab:orange")
+    # plt.plot(V, label="Tensión", color="tab:blue")
+    # plt.title(f"SoH = {SoH:.3f}")
+    # plt.xlabel("Tiempo (interpolado)")
+    # plt.ylabel("Magnitud")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.show()
+
 # Crear tensores finales
 # samples = samples[:5000]
 # labels = labels[:5000]
@@ -199,7 +199,7 @@ y_tensor = torch.tensor(labels)
 
 # Dataset y DataLoader combinados
 dataset_finetune = TensorDataset(X_tensor, y_tensor)
-dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
+dataloader_finetune = DataLoader(dataset_finetune, batch_size=32, shuffle=True)
 
 
 ########################################################################
@@ -227,7 +227,7 @@ optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters(
 criterion = torch.nn.MSELoss()
 
 # Fine-tuning loop
-for epoch in range(5):
+for epoch in range(1):
     for x, y in dataloader_finetune:
         output = model(x).squeeze()
         loss = criterion(output, y)
@@ -242,8 +242,8 @@ torch.save({
     'optimizer_state_dict': optimizer.state_dict(),
     'epoch': epoch,
     'loss': loss.item()
-}, "save_params/trained_model_narx_2var_finetuneado_csv_3.pth")
-output_path = "save_params/trained_model_narx_2var_finetuneado_csv_3.pth"
+}, "save_params/trained_model_narx_2var_finetuneado_csv_4.pth")
+output_path = "save_params/trained_model_narx_2var_finetuneado_csv_4.pth"
 print(f"✅ Modelo finetuneado guardado en: {output_path}")
 
 ########################################################################
