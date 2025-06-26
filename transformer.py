@@ -207,44 +207,44 @@ dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
 ########################################################################
 #
 # # Cargar modelo preentrenado
-model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
-#model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
+#model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
+model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
 # model.load_state_dict(torch.load('modelo_preentrenado.pth'))
 print(model)
-
-# Congelar todas las capas
-for param in model.parameters():
-    param.requires_grad = False
-
-# Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
-for param in model.fc.parameters():
-    param.requires_grad = True
-
-# Optimizador con learning rate bajo
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
-
-# Función de pérdida
-criterion = torch.nn.MSELoss()
-
-# Fine-tuning loop
-for epoch in range(5):
-    for x, y in dataloader_finetune:
-        output = model(x).squeeze()
-        loss = criterion(output, y)
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
-
-# Guardar el modelo finetuneado
-torch.save({
-    'model_state_dict': model.state_dict(),
-    'optimizer_state_dict': optimizer.state_dict(),
-    'epoch': epoch,
-    'loss': loss.item()
-}, "save_params/trained_model_narx_2var_finetuneado_csv_3.pth")
-output_path = "save_params/trained_model_narx_2var_finetuneado_csv_3.pth"
-print(f"✅ Modelo finetuneado guardado en: {output_path}")
+#
+# # Congelar todas las capas
+# for param in model.parameters():
+#     param.requires_grad = False
+#
+# # Descongelar solo la cabeza del modelo (ajústalo según tu arquitectura)
+# for param in model.fc.parameters():
+#     param.requires_grad = True
+#
+# # Optimizador con learning rate bajo
+# optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-5)
+#
+# # Función de pérdida
+# criterion = torch.nn.MSELoss()
+#
+# # Fine-tuning loop
+# for epoch in range(5):
+#     for x, y in dataloader_finetune:
+#         output = model(x).squeeze()
+#         loss = criterion(output, y)
+#         loss.backward()
+#         optimizer.step()
+#         optimizer.zero_grad()
+#         print(f"Epoch {epoch+1} - Loss: {loss.item():.6f}")
+#
+# # Guardar el modelo finetuneado
+# torch.save({
+#     'model_state_dict': model.state_dict(),
+#     'optimizer_state_dict': optimizer.state_dict(),
+#     'epoch': epoch,
+#     'loss': loss.item()
+# }, "save_params/trained_model_narx_2var_finetuneado_csv_3.pth")
+# output_path = "save_params/trained_model_narx_2var_finetuneado_csv_3.pth"
+# print(f"✅ Modelo finetuneado guardado en: {output_path}")
 
 ########################################################################
 # Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
@@ -279,17 +279,6 @@ for archivo in csv_files:
     with torch.no_grad():
         predicted_soh = model(sample_infer).item()
 
-        # Mostrar gráfico
-    plt.figure(figsize=(10, 3))
-    plt.plot(I, label="Corriente", color="tab:orange")
-    plt.plot(V, label="Tensión", color="tab:blue")
-    plt.title(f"{archivo} — SoH real = {real_SoH:.3f} /  SoH predicho = {predicted_soh:.3f}")
-    plt.xlabel("Tiempo (interpolado)")
-    plt.ylabel("Magnitud")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
 
     # Mostrar resultados
     print(f"📂 Archivo: {archivo}")
@@ -301,6 +290,20 @@ for archivo in csv_files:
 
     print(f"Error absoluto: {error_abs:.4f}")
     print(f"Error relativo: {error_rel:.2f}%\n{'-'*50}")
+
+    # Mostrar gráfico
+    plt.figure(figsize=(10, 3))
+    plt.plot(I, label="Corriente", color="tab:orange")
+    plt.plot(V, label="Tensión", color="tab:blue")
+    plt.title(f"{archivo} — SoH real = {real_SoH:.3f} /  SoH predicho = {predicted_soh:.3f} / Error: {error_rel:.2f}%\n{'-'*50}")
+    plt.xlabel("Tiempo (interpolado)")
+    plt.ylabel("Magnitud")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
 while True:
     pass
 
