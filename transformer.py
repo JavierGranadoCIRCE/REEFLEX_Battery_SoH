@@ -259,18 +259,22 @@ csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
 
 # Poner modelo en modo evaluación
 model.eval()
-
+errores_relativos = []
 for archivo in csv_files:
     ruta_csv = os.path.join(folder_infer, archivo)
     row = pd.read_csv(ruta_csv, header=None).values[0]
 
     # if len(row) != 801:
-    #     print(f"⚠️ {archivo} descartado por tamaño inesperado ({len(row)})")
+    #     print(f"⚠ {archivo} descartado por tamaño inesperado ({len(row)})")
     #     continue
 
     V = row[0:400]
     I = row[400:800]
-    real_SoH = 0.76
+    if "Ciclo_Sandia_Labs_1" in archivo:
+        real_SoH = row[800]
+    else:
+        real_SoH = 0.76
+
 
 
     # Preparar input (1, 400, 2)
@@ -281,7 +285,7 @@ for archivo in csv_files:
 
 
     # Mostrar resultados
-    print(f"📂 Archivo: {archivo}")
+    print(f"Archivo: {archivo}")
     print(f"SoH real:      {real_SoH:.4f}")
     print(f"SoH predicho:  {predicted_soh:.4f}")
 
@@ -290,6 +294,12 @@ for archivo in csv_files:
 
     print(f"Error absoluto: {error_abs:.4f}")
     print(f"Error relativo: {error_rel:.2f}%\n{'-'*50}")
+    errores_relativos.append(error_rel)
+
+    # Mostrar error promedio al final
+    if errores_relativos:
+        error_rel_medio = np.mean(errores_relativos)
+        print(f"\n Error relativo medio de todos los ciclos: {error_rel_medio:.2f}%")
 
     # Mostrar gráfico
     plt.figure(figsize=(10, 3))
