@@ -35,20 +35,20 @@ import torch, gc
 from torch.utils.data import TensorDataset, DataLoader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
-# mat_files = glob.glob(os.path.join(data_folder, "NMC_CELL_1_processed.mat"))
-# # Lista para almacenar los datos concatenados
-# raw = []
-# # # Cargar cada archivo y agregar sus datos a la lista `raw`
-# for mat_file in mat_files:
-#     data = scio.loadmat(mat_file)
-#     key = list(data.keys())[-1]  # Toma la última clave que suele ser el nombre del dataset
-#     extracted_data = data[key][0][0][0][0]  # Extrae los datos
-#     raw.extend(extracted_data)  # Concatenar los datos a la lista
-#
-# print(f"Se han cargado {len(mat_files)} archivos. Tamaño total de raw: {len(raw)}")
-#
-# pprint.pprint(raw[0])
+data_folder = "dataset/ARC-FY/"  # Modifica esto según tu estructura de carpetas
+mat_files = glob.glob(os.path.join(data_folder, "B*.mat"))
+# Lista para almacenar los datos concatenados
+raw = []
+# # Cargar cada archivo y agregar sus datos a la lista `raw`
+for mat_file in mat_files:
+    data = scio.loadmat(mat_file)
+    key = list(data.keys())[-1]  # Toma la última clave que suele ser el nombre del dataset
+    extracted_data = data[key][0][0][0][0]  # Extrae los datos
+    raw.extend(extracted_data)  # Concatenar los datos a la lista
+
+print(f"Se han cargado {len(mat_files)} archivos. Tamaño total de raw: {len(raw)}")
+
+pprint.pprint(raw[0])
 #
 #
 # #Creada rama FineTuning para mejorar el entrenamiento con Datasets de químicas similares a las d VE y con ciclos de laboratorio
@@ -149,57 +149,57 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #
 #
 
-# # ########################################################################
-# # # Fine tuning con Dataset de Laboratorios Sandia *.csv
-# # ########################################################################
-# Ruta al CSV
-csv_path = "C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/dataset_ciclos_carga.csv"
-
-# Cargar datos
-data = pd.read_csv(csv_path, header=None).values
-
-# Preparar tensores
-samples = []
-labels = []
-
-for i, row in enumerate(data):
-    row = np.asarray(row).flatten().astype(np.float32)
-
-    if row.shape[0] != 801:
-        print(f"⚠️ Ciclo {i} descartado: tamaño inesperado {row.shape}")
-        continue
-
-    I = row[0:400]
-    V = row[400:800]
-    SoH = row[800]
-
-    sample = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32)
-    label = torch.tensor(SoH, dtype=torch.float32)
-
-    samples.append(sample)
-    labels.append(label)
+# # # ########################################################################
+# # # # Fine tuning con Dataset de Laboratorios Sandia *.csv
+# # # ########################################################################
+# # Ruta al CSV
+# csv_path = "C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/dataset_ciclos_carga.csv"
 #
-#     # # Si quieres ver el gráfico de cada ciclo:
-#     # plt.figure(figsize=(10, 3))
-#     # plt.plot(I, label="Corriente", color="tab:orange")
-#     # plt.plot(V, label="Tensión", color="tab:blue")
-#     # plt.title(f"SoH = {SoH:.3f}")
-#     # plt.xlabel("Tiempo (interpolado)")
-#     # plt.ylabel("Magnitud")
-#     # plt.legend()
-#     # plt.grid(True)
-#     # plt.tight_layout()
-#     # plt.show()
+# # Cargar datos
+# data = pd.read_csv(csv_path, header=None).values
 #
-# Crear tensores finales
-# samples = samples[:5000]
-# labels = labels[:5000]
-X_tensor = torch.stack(samples)
-y_tensor = torch.tensor(labels)
-
-# Dataset y DataLoader combinados
-dataset_finetune = TensorDataset(X_tensor, y_tensor)
-dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
+# # Preparar tensores
+# samples = []
+# labels = []
+#
+# for i, row in enumerate(data):
+#     row = np.asarray(row).flatten().astype(np.float32)
+#
+#     if row.shape[0] != 801:
+#         print(f"⚠️ Ciclo {i} descartado: tamaño inesperado {row.shape}")
+#         continue
+#
+#     I = row[0:400]
+#     V = row[400:800]
+#     SoH = row[800]
+#
+#     sample = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32)
+#     label = torch.tensor(SoH, dtype=torch.float32)
+#
+#     samples.append(sample)
+#     labels.append(label)
+# #
+# #     # # Si quieres ver el gráfico de cada ciclo:
+# #     # plt.figure(figsize=(10, 3))
+# #     # plt.plot(I, label="Corriente", color="tab:orange")
+# #     # plt.plot(V, label="Tensión", color="tab:blue")
+# #     # plt.title(f"SoH = {SoH:.3f}")
+# #     # plt.xlabel("Tiempo (interpolado)")
+# #     # plt.ylabel("Magnitud")
+# #     # plt.legend()
+# #     # plt.grid(True)
+# #     # plt.tight_layout()
+# #     # plt.show()
+# #
+# # Crear tensores finales
+# # samples = samples[:5000]
+# # labels = labels[:5000]
+# X_tensor = torch.stack(samples)
+# y_tensor = torch.tensor(labels)
+#
+# # Dataset y DataLoader combinados
+# dataset_finetune = TensorDataset(X_tensor, y_tensor)
+# dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
 
 
 ########################################################################
@@ -207,7 +207,7 @@ dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
 ########################################################################
 #
 # # Cargar modelo preentrenado
-#model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
+# model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
 model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
 # model.load_state_dict(torch.load('modelo_preentrenado.pth'))
 print(model)
@@ -246,76 +246,76 @@ print(model)
 # output_path = "save_params/trained_model_narx_2var_finetuneado_csv_3.pth"
 # print(f"✅ Modelo finetuneado guardado en: {output_path}")
 
-########################################################################
-# Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
-########################################################################
-
-# Ruta a los CSVs de inferencia
-folder_infer = 'dataset/Data_finetuning'
-
-# Filtrar todos los archivos CSV en la carpeta
-csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
-
-
-# Poner modelo en modo evaluación
-model.eval()
-errores_relativos = []
-for archivo in csv_files:
-    ruta_csv = os.path.join(folder_infer, archivo)
-    row = pd.read_csv(ruta_csv, header=None).values[0]
-
-    # if len(row) != 801:
-    #     print(f"⚠ {archivo} descartado por tamaño inesperado ({len(row)})")
-    #     continue
-
-    V = row[0:400]
-    I = row[400:800]
-    if "Ciclo_Sandia_Labs_1" in archivo:
-        real_SoH = row[800]
-    else:
-        real_SoH = 0.76
-
-
-
-    # Preparar input (1, 400, 2)
-    sample_infer = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32).unsqueeze(0)
-
-    with torch.no_grad():
-        predicted_soh = model(sample_infer).item()
-
-
-    # Mostrar resultados
-    print(f"Archivo: {archivo}")
-    print(f"SoH real:      {real_SoH:.4f}")
-    print(f"SoH predicho:  {predicted_soh:.4f}")
-
-    error_abs = abs(predicted_soh - real_SoH)
-    error_rel = (error_abs / real_SoH) * 100 if real_SoH != 0 else float('inf')
-
-    print(f"Error absoluto: {error_abs:.4f}")
-    print(f"Error relativo: {error_rel:.2f}%\n{'-'*50}")
-    errores_relativos.append(error_rel)
-
-    # Mostrar error promedio al final
-    if errores_relativos:
-        error_rel_medio = np.mean(errores_relativos)
-        print(f"\n Error relativo medio de todos los ciclos: {error_rel_medio:.2f}%")
-
-    # Mostrar gráfico
-    plt.figure(figsize=(10, 3))
-    plt.plot(I, label="Corriente", color="tab:orange")
-    plt.plot(V, label="Tensión", color="tab:blue")
-    plt.title(f"{archivo} — SoH real = {real_SoH:.3f} /  SoH predicho = {predicted_soh:.3f} / Error: {error_rel:.2f}%\n{'-'*50}")
-    plt.xlabel("Tiempo (interpolado)")
-    plt.ylabel("Magnitud")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-
-while True:
-    pass
+# ########################################################################
+# # Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
+# ########################################################################
+#
+# # Ruta a los CSVs de inferencia
+# folder_infer = 'dataset/Data_finetuning'
+#
+# # Filtrar todos los archivos CSV en la carpeta
+# csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
+#
+#
+# # Poner modelo en modo evaluación
+# model.eval()
+# errores_relativos = []
+# for archivo in csv_files:
+#     ruta_csv = os.path.join(folder_infer, archivo)
+#     row = pd.read_csv(ruta_csv, header=None).values[0]
+#
+#     # if len(row) != 801:
+#     #     print(f"⚠ {archivo} descartado por tamaño inesperado ({len(row)})")
+#     #     continue
+#
+#     V = row[0:400]
+#     I = row[400:800]
+#     if "Ciclo_Sandia_Labs_1" in archivo:
+#         real_SoH = row[800]
+#     else:
+#         real_SoH = 0.76
+#
+#
+#
+#     # Preparar input (1, 400, 2)
+#     sample_infer = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32).unsqueeze(0)
+#
+#     with torch.no_grad():
+#         predicted_soh = model(sample_infer).item()
+#
+#
+#     # Mostrar resultados
+#     print(f"Archivo: {archivo}")
+#     print(f"SoH real:      {real_SoH:.4f}")
+#     print(f"SoH predicho:  {predicted_soh:.4f}")
+#
+#     error_abs = abs(predicted_soh - real_SoH)
+#     error_rel = (error_abs / real_SoH) * 100 if real_SoH != 0 else float('inf')
+#
+#     print(f"Error absoluto: {error_abs:.4f}")
+#     print(f"Error relativo: {error_rel:.2f}%\n{'-'*50}")
+#     errores_relativos.append(error_rel)
+#
+#     # Mostrar error promedio al final
+#     if errores_relativos:
+#         error_rel_medio = np.mean(errores_relativos)
+#         print(f"\n Error relativo medio de todos los ciclos: {error_rel_medio:.2f}%")
+#
+#     # Mostrar gráfico
+#     plt.figure(figsize=(10, 3))
+#     plt.plot(I, label="Corriente", color="tab:orange")
+#     plt.plot(V, label="Tensión", color="tab:blue")
+#     plt.title(f"{archivo} — SoH real = {real_SoH:.3f} /  SoH predicho = {predicted_soh:.3f} / Error: {error_rel:.2f}%\n{'-'*50}")
+#     plt.xlabel("Tiempo (interpolado)")
+#     plt.ylabel("Magnitud")
+#     plt.legend()
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.show()
+#
+#
+# while True:
+#     pass
 
 # ########################################################################
 # #Plotear ciclos de laboratorio *.csv###################################
@@ -431,8 +431,8 @@ while True:
 
 
 
-#dataFile = 'dataset/ARC-FY/B0005'   # Modify this path
-#raw = scio.loadmat(dataFile)['B0005'][0][0][0][0]
+# dataFile = 'dataset/ARC-FY/B0005'   # Modify this path
+# raw = scio.loadmat(dataFile)['B0005'][0][0][0][0]
 
 # raw data parsing
 cycles = []
@@ -951,10 +951,12 @@ if train == True:
 if inference ==  True:
 
     modo = "pth"  # Cambia a "pth" para usar el modelo original
-    modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
+    #modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
+    # modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
+    ruta_modelo = "C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_finetuneado_csv_2.pth"
     test_ds = TensorDataset(x_test, y_test)
     test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
-    realizar_inferencia_narx(test_loader, x_test, y_test, modo, modelo)
+    realizar_inferencia_narx(test_loader, x_test, y_test, modo, ruta_modelo)
     #realizar_inferencia_narx(test_loader_narx, x_test_narx, cap_test, y_test_narx, modo, modelo)
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 

@@ -296,8 +296,8 @@ def realizar_inferencia_narx(loader, x_test, y_test,  modo="onnx", modelo=None):
     print(f"ERROR TOTAL: {smape * 100:.1f}%")
 
 
-def cargar_modelo_pth_finetuning(modelo, path_modelo):
-    modelo = NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
+def cargar_modelo_pth_finetuning(model_class, path_modelo):
+    modelo = model_class(feature_dim1, feature_dim2, num_attention, num_cycles, num_preds)
     checkpoint = torch.load(path_modelo, map_location=torch.device('cuda'))
     print(checkpoint.keys())  # Verifica las claves del checkpoint
     modelo.load_state_dict(checkpoint['model_state_dict'])  # Cargar solo el modelo
