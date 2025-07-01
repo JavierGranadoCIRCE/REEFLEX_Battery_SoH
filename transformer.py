@@ -995,6 +995,7 @@ if inference ==  True:
     #realizar_inferencia_narx(fixed_test_loader,x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test, modo, modelo)
 
 #commit para control de versiones
+#commit para control de versiones
 
 
 #%%
