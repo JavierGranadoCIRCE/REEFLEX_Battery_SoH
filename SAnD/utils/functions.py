@@ -319,7 +319,7 @@ def cargar_modelo(modo="onnx", modelo = None):
 
 def export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds):
     modelo = NARX_Transformer_2var_SoloActual(feature_dim1,feature_dim2, num_attention, num_cycles, num_preds)
-    checkpoint = torch.load("save_params/trained_model_narx_2var_1ciclo_ok_last.pth", map_location="cpu")
+    checkpoint = torch.load("save_params/trained_model_narx_2var_1ciclo_NASA_Sandia.pth", map_location="cpu")
     modelo.load_state_dict(checkpoint["model_state_dict"], strict=False)
     modelo.eval()
     wrapped_model = WrappedModel_NARX(modelo)  # Envolver modelo con sigmoide
@@ -330,7 +330,7 @@ def export_trained_model_to_onnx(feature_dim1,feature_dim2, num_attention, num_c
     torch.onnx.export(
         wrapped_model,
         (dummy_x_test),  # ahora son dos entradas
-        "save_params/trained_model_narx_2var_1ciclo_ok_last.onnx",
+        "save_params/trained_model_narx_2var_1ciclo_NASA_Sandia.onnx",
         input_names=["x_pair"],
         output_names=["soh_pred"],
         opset_version=17,

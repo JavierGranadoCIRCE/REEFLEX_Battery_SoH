@@ -782,7 +782,7 @@ class NeuralNetworkClassifier:
 
         for epoch in range(self._start_epoch, epochs):
             if checkpoint_path is not None and epoch % 100 == 0:
-                self.save_to_file_normal_improve(checkpoint_path)
+                self.save_to_file_Narx("save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_checkpoint.pth")
 
             with self.experiment.train():
                 train_correct = 0.0
@@ -1300,20 +1300,19 @@ class NeuralNetworkClassifier:
         :param path: path to saving directory. : string
         :return: path to file : string
         """
-        if not os.path.isdir(path):
-            os.mkdir(path)
+        # if not os.path.isdir(path):
+        #     os.mkdir(path)
 
         # file_name = "model_params-epochs_{}-{}.pth".format(
         #     self.hyper_params["epochs"], time.ctime().replace(" ", "_")
         # )
-        file_name = "trained_model_narx_2var_1ciclo_NASA_Sandia.pth"
-        path = path + file_name
+        #file_name = "trained_model_narx_2var_1ciclo_NASA_Sandia.pth"
 
         checkpoints = self.save_checkpoint_narx()
 
         # torch.save(checkpoints, path,{"hyperparameters": hyperparameters})
         torch.save(checkpoints, path)
-        self.experiment.log_asset(path, file_name=file_name)
+        self.experiment.log_asset(path)
 
         return path
 

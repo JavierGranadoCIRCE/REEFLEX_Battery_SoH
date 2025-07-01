@@ -208,9 +208,9 @@ pprint.pprint(raw[0])
 #
 # # Cargar modelo preentrenado
 # model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
-model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
+#model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
 # model.load_state_dict(torch.load('modelo_preentrenado.pth'))
-print(model)
+#print(model)
 #
 # # Congelar todas las capas
 # for param in model.parameters():
@@ -517,138 +517,138 @@ data = torch.from_numpy(data_np).float()
 #################################################### Escalado canal por canal entre -1 y 1
 
 
-##########################################################################################################
-#Dataloader para NARX con los datos de la NASA de NARX
-##########################################################################################################
-# Load the YAML configuration file
-with open('config.yaml', 'r') as file:
-    cfg = yaml.safe_load(file)
-
-# # Access the variables
-NUM_CYCLES = cfg['NUM_CYCLES']
-NUM_PREDS = cfg['NUM_PREDS']
-FEATURE_DIM1 = cfg['FEATURE_DIM1']
-FEATURE_DIM2 = cfg['FEATURE_DIM2']
-NUM_ATTENTION = cfg['NUM_ATTENTION']
-EPOCHS = cfg['EPOCHS']
-LEARNING_RATE = cfg['LEARNING_RATE']
-BATCH_SIZE = cfg['BATCH_SIZE']
-
-# Load data
-train_dataset, test_dataset = load_NASA(folder='NASA_DATA', num_cycles=NUM_CYCLES+NUM_PREDS-1, split_ratio=0.5, scale_data=True)
-
-# Train/test split
-train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-test_dataloader  = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
-
-
-##########################################################################################################
-#Dataloader para NARX con los datos de la NASA de NN4SOH
-##########################################################################################################
-
-x_pairs, cap_inputs, y_targets = create_cycle_triplets(data, labels)
-
-######################################################################################
-# Mantener solo las dos primeras variables: V (0), I (1) para las olimpIAdas
-x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
-#######################################################################################
-x_train_narx, x_temp_narx, cap_train, cap_temp, y_train_narx, y_temp_narx = train_test_split(
-    x_pairs, cap_inputs, y_targets, test_size=0.2, random_state=42, shuffle=False)
-
-x_val_narx, x_test_narx, cap_val, cap_test, y_val_narx, y_test_narx = train_test_split(
-    x_temp_narx, cap_temp, y_temp_narx, test_size=0.5, random_state=42, shuffle=False)
-
-train_ds_narx = TensorDataset(x_train_narx, cap_train, y_train_narx)
-val_ds_narx = TensorDataset(x_val_narx, cap_val, y_val_narx)
-test_ds_narx = TensorDataset(x_test_narx, cap_test, y_test_narx)
-
-train_loader_narx = DataLoader(train_ds_narx, batch_size=32, shuffle=False)
-val_loader_narx = DataLoader(val_ds_narx, batch_size=32, shuffle=False)
-test_loader_narx = DataLoader(test_ds_narx, batch_size=32, shuffle=False)
-
-##########################################################################################################
-#ejemplos de test con el ciclo historico fijo #0
-# Seleccionamos el histórico fijo para que sea igual que el current
-######################################################################################################
-
-# Creamos nuevos pares con ese histórico fijo combinado con todos los ciclos de test
-x_pairs_fixed = []
-cap_inputs_fixed = []
-y_targets_fixed = []
-
-for i in range(len(x_test_narx)):
-    j = random.randint(0, 249)
-    current_cycle = x_test_narx[i][1]  # ciclo actual del par
-    soh_target = y_test_narx[i]       # SoH objetivo de este ciclo
-    historical_cycle = x_test_narx[j][1]  # ciclo actual del par
-    historical_soh = cap_test[j]
-
-    x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
-    x_pairs_fixed.append(x_pair)
-    cap_inputs_fixed.append(historical_soh)  # mismo SoH fijo como entrada
-    y_targets_fixed.append(soh_target)
-
-# Convertimos a tensores
-x_pairs_fixed_test = torch.stack(x_pairs_fixed)
-cap_inputs_fixed_test = torch.stack(cap_inputs_fixed)
-y_targets_fixed_test = torch.stack(y_targets_fixed)
-
-# Creamos el nuevo DataLoader con histórico fijo
-fixed_test_ds = TensorDataset(x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test)
-fixed_test_loader = DataLoader(fixed_test_ds, batch_size=32, shuffle=False)
-
-x_pairs_fixed = []
-cap_inputs_fixed = []
-y_targets_fixed = []
-
-for i in range(len(x_train_narx)-1):
-    b = len(x_train_narx)-1
-    j = random.randint(0, len(x_train_narx)-1)
-    current_cycle = x_train_narx[i+1][1]  # ciclo actual del par
-    soh_target = y_train_narx[i+1]       # SoH objetivo de este ciclo
-    historical_cycle = x_train_narx[i][1]  # ciclo actual del par
-    historical_soh = cap_train[i]
-
-    x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
-    x_pairs_fixed.append(x_pair)
-    cap_inputs_fixed.append(historical_soh)  # mismo SoH fijo como entrada
-    y_targets_fixed.append(soh_target)
-
-# Convertimos a tensores
-x_pairs_fixed_train = torch.stack(x_pairs_fixed)
-cap_inputs_fixed_train = torch.stack(cap_inputs_fixed)
-y_targets_fixed_train = torch.stack(y_targets_fixed)
-
-# Creamos el nuevo DataLoader con histórico fijo
-fixed_train_ds = TensorDataset(x_pairs_fixed_train, cap_inputs_fixed_train, y_targets_fixed_train)
-fixed_train_loader = DataLoader(fixed_train_ds, batch_size=32, shuffle=False)
-
-
-x_pairs_fixed = []
-cap_inputs_fixed = []
-y_targets_fixed = []
-
-for i in range(len(x_val_narx)):
-    current_cycle = x_val_narx[i][1]  # ciclo actual del par
-    soh_target = y_val_narx[i]       # SoH objetivo de este ciclo
-    historical_cycle = x_val_narx[i][1]  # ciclo actual del par
-    historical_soh = cap_val[i]
-
-
-    x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
-    x_pairs_fixed.append(x_pair)
-    cap_inputs_fixed.append(historical_soh)  # mismo SoH fijo como entrada
-    y_targets_fixed.append(soh_target)
-
-# Convertimos a tensores
-x_pairs_fixed_val = torch.stack(x_pairs_fixed)
-cap_inputs_fixed_val = torch.stack(cap_inputs_fixed)
-y_targets_fixed_val = torch.stack(y_targets_fixed)
-
-# Creamos el nuevo DataLoader con histórico fijo
-fixed_val_ds = TensorDataset(x_pairs_fixed_val, cap_inputs_fixed_val, y_targets_fixed_val)
-fixed_val_loader = DataLoader(fixed_val_ds, batch_size=32, shuffle=False)
-##########################################################################################################
+# ##########################################################################################################
+# #Dataloader para NARX con los datos de la NASA de NARX
+# ##########################################################################################################
+# # Load the YAML configuration file
+# with open('config.yaml', 'r') as file:
+#     cfg = yaml.safe_load(file)
+#
+# # # Access the variables
+# NUM_CYCLES = cfg['NUM_CYCLES']
+# NUM_PREDS = cfg['NUM_PREDS']
+# FEATURE_DIM1 = cfg['FEATURE_DIM1']
+# FEATURE_DIM2 = cfg['FEATURE_DIM2']
+# NUM_ATTENTION = cfg['NUM_ATTENTION']
+# EPOCHS = cfg['EPOCHS']
+# LEARNING_RATE = cfg['LEARNING_RATE']
+# BATCH_SIZE = cfg['BATCH_SIZE']
+#
+# # Load data
+# train_dataset, test_dataset = load_NASA(folder='NASA_DATA', num_cycles=NUM_CYCLES+NUM_PREDS-1, split_ratio=0.5, scale_data=True)
+#
+# # Train/test split
+# train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+# test_dataloader  = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
+#
+#
+# ##########################################################################################################
+# #Dataloader para NARX con los datos de la NASA de NN4SOH
+# ##########################################################################################################
+#
+# x_pairs, cap_inputs, y_targets = create_cycle_triplets(data, labels)
+#
+# ######################################################################################
+# # Mantener solo las dos primeras variables: V (0), I (1) para las olimpIAdas
+# x_pairs = x_pairs[:, :, :, :2]  # Deja solo V e I, elimina Tª (índice 2)
+# #######################################################################################
+# x_train_narx, x_temp_narx, cap_train, cap_temp, y_train_narx, y_temp_narx = train_test_split(
+#     x_pairs, cap_inputs, y_targets, test_size=0.2, random_state=42, shuffle=False)
+#
+# x_val_narx, x_test_narx, cap_val, cap_test, y_val_narx, y_test_narx = train_test_split(
+#     x_temp_narx, cap_temp, y_temp_narx, test_size=0.5, random_state=42, shuffle=False)
+#
+# train_ds_narx = TensorDataset(x_train_narx, cap_train, y_train_narx)
+# val_ds_narx = TensorDataset(x_val_narx, cap_val, y_val_narx)
+# test_ds_narx = TensorDataset(x_test_narx, cap_test, y_test_narx)
+#
+# train_loader_narx = DataLoader(train_ds_narx, batch_size=32, shuffle=False)
+# val_loader_narx = DataLoader(val_ds_narx, batch_size=32, shuffle=False)
+# test_loader_narx = DataLoader(test_ds_narx, batch_size=32, shuffle=False)
+#
+# ##########################################################################################################
+# #ejemplos de test con el ciclo historico fijo #0
+# # Seleccionamos el histórico fijo para que sea igual que el current
+# ######################################################################################################
+#
+# # Creamos nuevos pares con ese histórico fijo combinado con todos los ciclos de test
+# x_pairs_fixed = []
+# cap_inputs_fixed = []
+# y_targets_fixed = []
+#
+# for i in range(len(x_test_narx)):
+#     j = random.randint(0, 249)
+#     current_cycle = x_test_narx[i][1]  # ciclo actual del par
+#     soh_target = y_test_narx[i]       # SoH objetivo de este ciclo
+#     historical_cycle = x_test_narx[j][1]  # ciclo actual del par
+#     historical_soh = cap_test[j]
+#
+#     x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
+#     x_pairs_fixed.append(x_pair)
+#     cap_inputs_fixed.append(historical_soh)  # mismo SoH fijo como entrada
+#     y_targets_fixed.append(soh_target)
+#
+# # Convertimos a tensores
+# x_pairs_fixed_test = torch.stack(x_pairs_fixed)
+# cap_inputs_fixed_test = torch.stack(cap_inputs_fixed)
+# y_targets_fixed_test = torch.stack(y_targets_fixed)
+#
+# # Creamos el nuevo DataLoader con histórico fijo
+# fixed_test_ds = TensorDataset(x_pairs_fixed_test, cap_inputs_fixed_test, y_targets_fixed_test)
+# fixed_test_loader = DataLoader(fixed_test_ds, batch_size=32, shuffle=False)
+#
+# x_pairs_fixed = []
+# cap_inputs_fixed = []
+# y_targets_fixed = []
+#
+# for i in range(len(x_train_narx)-1):
+#     b = len(x_train_narx)-1
+#     j = random.randint(0, len(x_train_narx)-1)
+#     current_cycle = x_train_narx[i+1][1]  # ciclo actual del par
+#     soh_target = y_train_narx[i+1]       # SoH objetivo de este ciclo
+#     historical_cycle = x_train_narx[i][1]  # ciclo actual del par
+#     historical_soh = cap_train[i]
+#
+#     x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
+#     x_pairs_fixed.append(x_pair)
+#     cap_inputs_fixed.append(historical_soh)  # mismo SoH fijo como entrada
+#     y_targets_fixed.append(soh_target)
+#
+# # Convertimos a tensores
+# x_pairs_fixed_train = torch.stack(x_pairs_fixed)
+# cap_inputs_fixed_train = torch.stack(cap_inputs_fixed)
+# y_targets_fixed_train = torch.stack(y_targets_fixed)
+#
+# # Creamos el nuevo DataLoader con histórico fijo
+# fixed_train_ds = TensorDataset(x_pairs_fixed_train, cap_inputs_fixed_train, y_targets_fixed_train)
+# fixed_train_loader = DataLoader(fixed_train_ds, batch_size=32, shuffle=False)
+#
+#
+# x_pairs_fixed = []
+# cap_inputs_fixed = []
+# y_targets_fixed = []
+#
+# for i in range(len(x_val_narx)):
+#     current_cycle = x_val_narx[i][1]  # ciclo actual del par
+#     soh_target = y_val_narx[i]       # SoH objetivo de este ciclo
+#     historical_cycle = x_val_narx[i][1]  # ciclo actual del par
+#     historical_soh = cap_val[i]
+#
+#
+#     x_pair = torch.stack([historical_cycle, current_cycle])  # (2, 400, 3)
+#     x_pairs_fixed.append(x_pair)
+#     cap_inputs_fixed.append(historical_soh)  # mismo SoH fijo como entrada
+#     y_targets_fixed.append(soh_target)
+#
+# # Convertimos a tensores
+# x_pairs_fixed_val = torch.stack(x_pairs_fixed)
+# cap_inputs_fixed_val = torch.stack(cap_inputs_fixed)
+# y_targets_fixed_val = torch.stack(y_targets_fixed)
+#
+# # Creamos el nuevo DataLoader con histórico fijo
+# fixed_val_ds = TensorDataset(x_pairs_fixed_val, cap_inputs_fixed_val, y_targets_fixed_val)
+# fixed_val_loader = DataLoader(fixed_val_ds, batch_size=32, shuffle=False)
+# ##########################################################################################################
 
 
 
@@ -688,74 +688,107 @@ y_train = y_train.clone().detach().float()
 y_val = y_val.clone().detach().float()
 y_test = y_test.clone().detach().float()
 
-# Shuffle los datos (opcional si `train_test_split` ya los aleatoriza)
-indices = torch.randperm(len(x_train))
-x_train, y_train = x_train[indices], y_train[indices]
-
-# Crear DataLoaders
-train_ds = TensorDataset(x_train, y_train)
-val_ds = TensorDataset(x_val, y_val)
-test_ds = TensorDataset(x_test, y_test)
-
-train_loader = DataLoader(train_ds, batch_size=32, shuffle=False)
-val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
-test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
-
-
-
-##########################################################################
-import torch
-from torch.utils.data import DataLoader, TensorDataset
-import pandas as pd
-import numpy as np
-
-# =============================
-# 1️⃣ Cargar estadísticas de normalización
-# =============================
-# normalization_stats = torch.load('save_params/normalization_stats.pt')
-# means, stds = normalization_stats['mean'], normalization_stats['std']
-
-# =============================
-# 2️⃣ Cargar el nuevo ciclo
-# =============================
-file_path_prueba_real = 'save_params/prueba_real.csv'
-prueba_real_data = pd.read_csv(file_path_prueba_real, header=None)
-
-# Separar los datos en voltaje, corriente y SoH
-voltage_values_prueba = prueba_real_data.iloc[0, :400].values
-current_values_prueba = prueba_real_data.iloc[0, 400:800].values
-soh_value_prueba = prueba_real_data.iloc[0, 800]
-
-# =============================
-# 3️⃣ Formatear y normalizar el ciclo
-# =============================
-nuevo_ciclo = np.stack((voltage_values_prueba, current_values_prueba), axis=-1)
-nuevo_ciclo_tensor = torch.tensor(nuevo_ciclo, dtype=torch.float32)
-
-# Aplicar normalización
-# nuevo_ciclo_tensor = (nuevo_ciclo_tensor - means) / stds
+# # Shuffle los datos (opcional si `train_test_split` ya los aleatoriza)
+# indices = torch.randperm(len(x_train))
+# x_train, y_train = x_train[indices], y_train[indices]
 #
-# # Expandir dimensión para cumplir con (1, 400, 2)
-nuevo_ciclo_tensor = nuevo_ciclo_tensor.unsqueeze(0)
+# # Crear DataLoaders
+# train_ds = TensorDataset(x_train, y_train)
+# val_ds = TensorDataset(x_val, y_val)
+# test_ds = TensorDataset(x_test, y_test)
+#
+# train_loader = DataLoader(train_ds, batch_size=32, shuffle=False)
+# val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
+# test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
 
-# =============================
-# 4️⃣ Añadir al conjunto de test
-# =============================
-x_test = torch.cat((x_test, nuevo_ciclo_tensor), dim=0)
-y_test = torch.cat((y_test, torch.tensor([0.74], dtype=torch.float32)), dim=0)
+# ─────────────────────── CARGAR DATOS DE SANDIA ─────────────────────── #
+df = pd.read_csv("C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/dataset_ciclos_carga.csv", header=None).values
+V = df[:, :400].astype(np.float32)
+I = df[:, 400:800].astype(np.float32)
+SoH = df[:, 800].astype(np.float32)
 
-# =============================
-# 5️⃣ Actualizar DataLoader
-# =============================
-test_ds = TensorDataset(x_test, y_test)
-test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
+x_sandia = torch.tensor(np.stack([V, I], axis=-1), dtype=torch.float32)
+y_sandia = torch.tensor(SoH, dtype=torch.float32)
 
-# =============================
-# ✅ Verificación final
-# =============================
-print(f"Dimensiones de x_test: {x_test.shape}")
-print(f"Dimensiones de y_test: {y_test.shape}")
-print("¡Nuevo ciclo añadido correctamente al DataLoader de test!")
+# Split sin shuffle para mantener coherencia con los datos NASA
+x_train_s, x_temp_s, y_train_s, y_temp_s = train_test_split(x_sandia, y_sandia, test_size=0.2, shuffle=False)
+x_val_s, x_test_s, y_val_s, y_test_s = train_test_split(x_temp_s, y_temp_s, test_size=0.5, shuffle=False)
+
+# ─────────────────────── COMBINAR CON NASA ─────────────────────── #
+x_train_comb = torch.cat([x_train, x_train_s], dim=0)
+y_train_comb = torch.cat([y_train, y_train_s], dim=0)
+x_val_comb = torch.cat([x_val, x_val_s], dim=0)
+y_val_comb = torch.cat([y_val, y_val_s], dim=0)
+x_test_comb = torch.cat([x_test, x_test_s], dim=0)
+y_test_comb = torch.cat([y_test, y_test_s], dim=0)
+
+# Shuffle solo los datos de entrenamiento
+indices = torch.randperm(len(x_train_comb))
+x_train_comb, y_train_comb = x_train_comb[indices], y_train_comb[indices]
+
+
+x_train, y_train = x_train_comb, y_train_comb
+x_val, y_val = x_val_comb, y_val_comb
+x_test, y_test = x_test_comb, y_test_comb
+
+# ─────────────────────── DATALOADERS ─────────────────────── #
+train_loader = DataLoader(TensorDataset(x_train, y_train), batch_size=32, shuffle=True)
+val_loader = DataLoader(TensorDataset(x_val, y_val), batch_size=32, shuffle=False)
+test_loader = DataLoader(TensorDataset(x_test, y_test), batch_size=32, shuffle=False)
+
+# ##########################################################################
+# import torch
+# from torch.utils.data import DataLoader, TensorDataset
+# import pandas as pd
+# import numpy as np
+#
+# # =============================
+# # 1️⃣ Cargar estadísticas de normalización
+# # =============================
+# # normalization_stats = torch.load('save_params/normalization_stats.pt')
+# # means, stds = normalization_stats['mean'], normalization_stats['std']
+#
+# # =============================
+# # 2️⃣ Cargar el nuevo ciclo
+# # =============================
+# file_path_prueba_real = 'save_params/prueba_real.csv'
+# prueba_real_data = pd.read_csv(file_path_prueba_real, header=None)
+#
+# # Separar los datos en voltaje, corriente y SoH
+# voltage_values_prueba = prueba_real_data.iloc[0, :400].values
+# current_values_prueba = prueba_real_data.iloc[0, 400:800].values
+# soh_value_prueba = prueba_real_data.iloc[0, 800]
+#
+# # =============================
+# # 3️⃣ Formatear y normalizar el ciclo
+# # =============================
+# nuevo_ciclo = np.stack((voltage_values_prueba, current_values_prueba), axis=-1)
+# nuevo_ciclo_tensor = torch.tensor(nuevo_ciclo, dtype=torch.float32)
+#
+# # Aplicar normalización
+# # nuevo_ciclo_tensor = (nuevo_ciclo_tensor - means) / stds
+# #
+# # # Expandir dimensión para cumplir con (1, 400, 2)
+# nuevo_ciclo_tensor = nuevo_ciclo_tensor.unsqueeze(0)
+#
+# # =============================
+# # 4️⃣ Añadir al conjunto de test
+# # =============================
+# x_test = torch.cat((x_test, nuevo_ciclo_tensor), dim=0)
+# y_test = torch.cat((y_test, torch.tensor([0.74], dtype=torch.float32)), dim=0)
+#
+# # =============================
+# # 5️⃣ Actualizar DataLoader
+# # =============================
+# test_ds = TensorDataset(x_test, y_test)
+# test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
+#
+# # =============================
+# # ✅ Verificación final
+# # =============================
+# print(f"Dimensiones de x_test: {x_test.shape}")
+# print(f"Dimensiones de y_test: {y_test.shape}")
+# print("¡Nuevo ciclo añadido correctamente al DataLoader de test!")
 
 
 
@@ -836,7 +869,7 @@ if inference == True:
     torch.cuda.empty_cache()
     train = False
 elif inference == False:
-    train = False
+    train = True
     finetuning = False
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -917,7 +950,8 @@ if train == True:
                     {"train_narx": train_loader,
                 "val_narx": val_loader,
                 "test_narx": test_loader},
-                epochs=1000
+                epochs=200,
+                checkpoint_path="save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_checkpoint.pth"
         )
 
 
@@ -933,7 +967,7 @@ if train == True:
     # ##################################################################################################
     # # # save pth model when training process is completed
     # #############################################################################################
-        clf.save_to_file_Narx("save_params/")
+        clf.save_to_file_Narx("save_params/trained_model_narx_2var_1ciclo_NASA_Sandia.pth")
     #############################################################################################
 
     # ##################################################################################################
@@ -953,7 +987,7 @@ if inference ==  True:
     modo = "pth"  # Cambia a "pth" para usar el modelo original
     #modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
     # modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
-    ruta_modelo = "C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_finetuneado_csv_2.pth"
+    ruta_modelo = "C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_1ciclo_NASA_Sandia.pth"
     test_ds = TensorDataset(x_test, y_test)
     test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, ruta_modelo)
