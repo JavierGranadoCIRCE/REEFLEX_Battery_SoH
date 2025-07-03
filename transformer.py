@@ -62,37 +62,37 @@ pprint.pprint(raw[0])
 # ########################################################################
 # # Fine tuning con ciclos reales de lab
 # ########################################################################
-#
-# csv_paths = [
-#     'dataset/Data_finetuning/fila_normalizada_soh_050.csv',
-#     'dataset/Data_finetuning/fila_normalizada_soh_073.csv',
-#     'dataset/Data_finetuning/fila_normalizada_soh_079.csv'
-# ]
-#
-# samples = []
-# labels = []
-#
-# for path in csv_paths:
-#     row = pd.read_csv(path, header=None).values[0]
-#
-#     V = row[0:400]
-#     I = row[400:800]
-#     SoH = row[1200]
-#
-#     # Crear tensor (400, 2) solo con V e I
-#     sample = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32)
-#     label = torch.tensor(SoH, dtype=torch.float32)
-#
-#     samples.append(sample)
-#     labels.append(label)
-#
-# # Convertir a tensores (3, 400, 2) y (3,)
-# data = torch.stack(samples)
-# targets = torch.tensor(labels)
-#
-# # Dataset y DataLoader
-# dataset = TensorDataset(data, targets)
-# dataloader_finetune = DataLoader(dataset, batch_size=1, shuffle=True)
+
+csv_paths = [
+    'dataset/Data_finetuning/Ciclo_batería_lab_1.csv',
+    'dataset/Data_finetuning/Ciclo_batería_lab_2.csv',
+    'dataset/Data_finetuning/Ciclo_batería_lab_3.csv'
+]
+
+samples = []
+labels = []
+
+for path in csv_paths:
+    row = pd.read_csv(path, header=None).values[0]
+
+    V = row[0:400]
+    I = row[400:800]
+    SoH = row[1200]
+
+    # Crear tensor (400, 2) solo con V e I
+    sample = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32)
+    label = torch.tensor(SoH, dtype=torch.float32)
+
+    samples.append(sample)
+    labels.append(label)
+
+# Convertir a tensores (3, 400, 2) y (3,)
+data = torch.stack(samples)
+targets = torch.tensor(labels)
+
+# Dataset y DataLoader
+dataset = TensorDataset(data, targets)
+dataloader_finetune = DataLoader(dataset, batch_size=1, shuffle=True)
 
 
 # # ########################################################################
@@ -149,9 +149,9 @@ pprint.pprint(raw[0])
 #
 #
 
-# # # ########################################################################
-# # # # Fine tuning con Dataset de Laboratorios Sandia *.csv
-# # # ########################################################################
+# # ########################################################################
+# # # Fine tuning con Dataset de Laboratorios Sandia *.csv
+# # ########################################################################
 # # Ruta al CSV
 # csv_path = "C:/Users/reeflex/olimpIAdas_VoltIA/dataset/ARC-FY/dataset_ciclos_carga.csv"
 #
@@ -194,23 +194,30 @@ pprint.pprint(raw[0])
 # # Crear tensores finales
 # # samples = samples[:5000]
 # # labels = labels[:5000]
-# X_tensor = torch.stack(samples)
-# y_tensor = torch.tensor(labels)
+# x_test = torch.stack(samples)
+# y_test = torch.tensor(labels)
 #
 # # Dataset y DataLoader combinados
-# dataset_finetune = TensorDataset(X_tensor, y_tensor)
-# dataloader_finetune = DataLoader(dataset_finetune, batch_size=16, shuffle=True)
-
-
-########################################################################
-# Fine-tuning del modelo preentrenado
-########################################################################
+# test_ds = TensorDataset(x_test, y_test)
+# test_loader = DataLoader(test_ds, batch_size=16, shuffle=True)
 #
+# modo = "pth"  # Cambia a "pth" para usar el modelo original
+# #modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
+# # modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
+# ruta_modelo = "C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth"
+# realizar_inferencia_narx(test_loader, x_test, y_test, modo, ruta_modelo)
+# while True:
+#     pass
+
+# ########################################################################
+# # Fine-tuning del modelo preentrenado
+# ########################################################################
+# #
 # # Cargar modelo preentrenado
-# model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
-#model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
-# model.load_state_dict(torch.load('modelo_preentrenado.pth'))
-#print(model)
+# # model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_ok_last.pth")
+# model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2.pth")
+# # model.load_state_dict(torch.load('trained_model_narx_2var_1ciclo_NASA_Sandia_2.pth'))
+# print(model)
 #
 # # Congelar todas las capas
 # for param in model.parameters():
@@ -227,7 +234,7 @@ pprint.pprint(raw[0])
 # criterion = torch.nn.MSELoss()
 #
 # # Fine-tuning loop
-# for epoch in range(5):
+# for epoch in range(100):
 #     for x, y in dataloader_finetune:
 #         output = model(x).squeeze()
 #         loss = criterion(output, y)
@@ -242,20 +249,20 @@ pprint.pprint(raw[0])
 #     'optimizer_state_dict': optimizer.state_dict(),
 #     'epoch': epoch,
 #     'loss': loss.item()
-# }, "save_params/trained_model_narx_2var_finetuneado_csv_3.pth")
-# output_path = "save_params/trained_model_narx_2var_finetuneado_csv_3.pth"
+# }, "save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth")
+# output_path = "save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth"
 # print(f"✅ Modelo finetuneado guardado en: {output_path}")
-
-# ########################################################################
-# # Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
-# ########################################################################
 #
+########################################################################
+# Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
+########################################################################
+
 # # Ruta a los CSVs de inferencia
 # folder_infer = 'dataset/Data_finetuning'
 #
 # # Filtrar todos los archivos CSV en la carpeta
 # csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
-#
+# model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth")
 #
 # # Poner modelo en modo evaluación
 # model.eval()
@@ -732,9 +739,9 @@ x_val, y_val = x_val_comb, y_val_comb
 x_test, y_test = x_test_comb, y_test_comb
 
 # ─────────────────────── DATALOADERS ─────────────────────── #
-train_loader = DataLoader(TensorDataset(x_train, y_train), batch_size=32, shuffle=True)
-val_loader = DataLoader(TensorDataset(x_val, y_val), batch_size=32, shuffle=False)
-test_loader = DataLoader(TensorDataset(x_test, y_test), batch_size=32, shuffle=False)
+train_loader = DataLoader(TensorDataset(x_train, y_train), batch_size=16, shuffle=True)
+val_loader = DataLoader(TensorDataset(x_val, y_val), batch_size=16, shuffle=False)
+test_loader = DataLoader(TensorDataset(x_test, y_test), batch_size=16, shuffle=False)
 
 # ##########################################################################
 # import torch
@@ -844,7 +851,7 @@ clf = NeuralNetworkClassifier(
     nn.MSELoss(),
     #nn.L1Loss(),
     nn.SmoothL1Loss(beta=0.7),  # Cambiar a SmoothL1Loss,
-    optim.AdamW,optimizer_config={"lr": 1e-7, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
+    optim.AdamW,optimizer_config={"lr": 1e-5, "betas": (0.9, 0.98), "eps": 1e-08, "weight_decay": 1e-4},
     # optim.AdamW,optimizer_config={"lr": 1e-6, "betas": (0.9, 0.96), "eps": 1e-08, "weight_decay": 1e-6},
     # optim.SGD, optimizer_config={"lr":1e-6, "momentum": 0.9,"weight_decay": 1e-4},
     #experiment=Experiment("8mKGHiYeg2P7dZEFlvQv3PEzc")
@@ -967,7 +974,7 @@ if train == True:
     # ##################################################################################################
     # # # save pth model when training process is completed
     # #############################################################################################
-        clf.save_to_file_Narx("save_params/trained_model_narx_2var_1ciclo_NASA_Sandia.pth")
+        clf.save_to_file_Narx("save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_3.pth")
     #############################################################################################
 
     # ##################################################################################################
@@ -987,7 +994,7 @@ if inference ==  True:
     modo = "pth"  # Cambia a "pth" para usar el modelo original
     #modelo, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_finetuneado_csv_2.pth")
     # modelo ="save_params/trained_model_narx_2var_1ciclo_ok_last.pth"
-    ruta_modelo = "C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_1ciclo_NASA_Sandia.pth"
+    ruta_modelo = "C:/Users/reeflex/olimpIAdas_VoltIA/save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth"
     test_ds = TensorDataset(x_test, y_test)
     test_loader = DataLoader(test_ds, batch_size=32, shuffle=False)
     realizar_inferencia_narx(test_loader, x_test, y_test, modo, ruta_modelo)

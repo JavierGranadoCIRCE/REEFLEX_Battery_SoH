@@ -781,7 +781,7 @@ class NeuralNetworkClassifier:
         self.experiment.log_parameters(self.hyper_params)
 
         for epoch in range(self._start_epoch, epochs):
-            if checkpoint_path is not None and epoch % 100 == 0:
+            if checkpoint_path is not None and epoch % 10 == 0:
                 self.save_to_file_Narx("save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_checkpoint.pth")
 
             with self.experiment.train():
