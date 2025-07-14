@@ -257,72 +257,74 @@ dataloader_finetune = DataLoader(dataset, batch_size=1, shuffle=True)
 # Inferencia con ciclo nuevo: fila_normalizada_soh_079_2.csv
 ########################################################################
 
-# # Ruta a los CSVs de inferencia
-# folder_infer = 'dataset/Data_finetuning'
-#
-# # Filtrar todos los archivos CSV en la carpeta
-# csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
-# model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth")
-#
-# # Poner modelo en modo evaluación
-# model.eval()
-# errores_relativos = []
-# for archivo in csv_files:
-#     ruta_csv = os.path.join(folder_infer, archivo)
-#     row = pd.read_csv(ruta_csv, header=None).values[0]
-#
-#     # if len(row) != 801:
-#     #     print(f"⚠ {archivo} descartado por tamaño inesperado ({len(row)})")
-#     #     continue
-#
-#     V = row[0:400]
-#     I = row[400:800]
-#     if "Ciclo_Sandia_Labs_1" in archivo:
-#         real_SoH = row[800]
-#     else:
-#         real_SoH = 0.76
-#
-#
-#
-#     # Preparar input (1, 400, 2)
-#     sample_infer = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32).unsqueeze(0)
-#
-#     with torch.no_grad():
-#         predicted_soh = model(sample_infer).item()
-#
-#
-#     # Mostrar resultados
-#     print(f"Archivo: {archivo}")
-#     print(f"SoH real:      {real_SoH:.4f}")
-#     print(f"SoH predicho:  {predicted_soh:.4f}")
-#
-#     error_abs = abs(predicted_soh - real_SoH)
-#     error_rel = (error_abs / real_SoH) * 100 if real_SoH != 0 else float('inf')
-#
-#     print(f"Error absoluto: {error_abs:.4f}")
-#     print(f"Error relativo: {error_rel:.2f}%\n{'-'*50}")
-#     errores_relativos.append(error_rel)
-#
-#     # Mostrar error promedio al final
-#     if errores_relativos:
-#         error_rel_medio = np.mean(errores_relativos)
-#         print(f"\n Error relativo medio de todos los ciclos: {error_rel_medio:.2f}%")
-#
-#     # Mostrar gráfico
-#     plt.figure(figsize=(10, 3))
-#     plt.plot(I, label="Corriente", color="tab:orange")
-#     plt.plot(V, label="Tensión", color="tab:blue")
-#     plt.title(f"{archivo} — SoH real = {real_SoH:.3f} /  SoH predicho = {predicted_soh:.3f} / Error: {error_rel:.2f}%\n{'-'*50}")
-#     plt.xlabel("Tiempo (interpolado)")
-#     plt.ylabel("Magnitud")
-#     plt.legend()
-#     plt.grid(True)
-#     plt.tight_layout()
-#     plt.show()
-#
-#
-# while True:
-#     pass
+# Ruta a los CSVs de inferencia
+folder_infer = 'dataset/Data_finetuning'
+
+# Filtrar todos los archivos CSV en la carpeta
+csv_files = [f for f in os.listdir(folder_infer) if f.endswith(".csv")]
+model, checkpoint = cargar_modelo_pth_finetuning(NARX_Transformer_2var_SoloActual,"save_params/trained_model_narx_2var_1ciclo_NASA_Sandia_2_finetuneado.pth")
+
+# Poner modelo en modo evaluación
+model.eval()
+errores_relativos = []
+for archivo in csv_files:
+    ruta_csv = os.path.join(folder_infer, archivo)
+    row = pd.read_csv(ruta_csv, header=None).values[0]
+
+    # if len(row) != 801:
+    #     print(f"⚠ {archivo} descartado por tamaño inesperado ({len(row)})")
+    #     continue
+
+    V = row[0:400]
+    I = row[400:800]
+    if "Ciclo_Sandia_Labs_1" in archivo:
+        real_SoH = row[800]
+    elif "ciclo_coche" in archivo:
+        real_SoH = 0.81
+    else:
+        real_SoH = 0.76
+
+
+
+    # Preparar input (1, 400, 2)
+    sample_infer = torch.tensor(np.stack((V, I), axis=1), dtype=torch.float32).unsqueeze(0)
+
+    with torch.no_grad():
+        predicted_soh = model(sample_infer).item()
+
+
+    # Mostrar resultados
+    print(f"Archivo: {archivo}")
+    print(f"SoH real:      {real_SoH:.4f}")
+    print(f"SoH predicho:  {predicted_soh:.4f}")
+
+    error_abs = abs(predicted_soh - real_SoH)
+    error_rel = (error_abs / real_SoH) * 100 if real_SoH != 0 else float('inf')
+
+    print(f"Error absoluto: {error_abs:.4f}")
+    print(f"Error relativo: {error_rel:.2f}%\n{'-'*50}")
+    errores_relativos.append(error_rel)
+
+    # Mostrar error promedio al final
+    if errores_relativos:
+        error_rel_medio = np.mean(errores_relativos)
+        print(f"\n Error relativo medio de todos los ciclos: {error_rel_medio:.2f}%")
+
+    # Mostrar gráfico
+    plt.figure(figsize=(10, 3))
+    plt.plot(I, label="Corriente", color="tab:orange")
+    plt.plot(V, label="Tensión", color="tab:blue")
+    plt.title(f"{archivo} — SoH real = {real_SoH:.3f} /  SoH predicho = {predicted_soh:.3f} / Error: {error_rel:.2f}%\n{'-'*50}")
+    plt.xlabel("Tiempo (interpolado)")
+    plt.ylabel("Magnitud")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
+while True:
+    pass
 
 # ########################################################################
 # #Plotear ciclos de laboratorio *.csv###################################
