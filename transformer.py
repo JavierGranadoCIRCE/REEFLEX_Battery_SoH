@@ -842,6 +842,7 @@ LEARNING_RATE = cfg['LEARNING_RATE']
 BATCH_SIZE = cfg['BATCH_SIZE']
 
 
+
 clf = NeuralNetworkClassifier(
     SiameseSAnD(SAnD_Embedding(in_feature, seq_len, n_heads, factor, num_class, num_layers)),
     SAnD(in_feature, seq_len, n_heads, factor, num_class, num_layers),
